@@ -111,6 +111,9 @@ don't at all, though HTTP sessions _are_ significant insofar as they
 retain the message queue nREPL will dispatch responses to that are
 emitted by asynchronous or long-running operations.
 
+Secondarily, supporting nontextual REPL interactions over HTTP has not
+yet been addressed at all.
+
 ## Need Help?
 
 Send a message to the [clojure-tools](http://groups.google.com/group/clojure-tools)
