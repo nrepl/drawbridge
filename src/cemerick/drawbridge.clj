@@ -14,7 +14,7 @@
                                  [server :as server])
             [cheshire.core :as json]
             [ring.util.response :as response]
-            clojure.walk
+            [clojure.walk :as walk]
             [clojure.java.io :as io]
             [clj-http.client :as http])
   (:use (ring.middleware params keyword-params nested-params session))
@@ -137,12 +137,13 @@
 (.addMethod nrepl/url-connect "http" #'ring-client-transport)
 (.addMethod nrepl/url-connect "https" #'ring-client-transport)
 
-(comment
-  (def app (-> (ring-handler)
-             wrap-keyword-params
-             wrap-nested-params
-             wrap-params
-             wrap-session))
-  
-  (require 'ring.adapter.jetty)
-  (defonce server (ring.adapter.jetty/run-jetty #'app {:port 8080 :join? false})))
+;; as an example:
+(defn -main [& args]
+  (let [options (walk/keywordize-keys (apply hash-map args))
+        app (-> (ring-handler)
+                wrap-keyword-params
+                wrap-nested-params
+                wrap-params
+                wrap-session)
+        run-jetty (ns-resolve (doto 'ring.adapter.jetty require) 'run-jetty)]
+    (run-jetty app (merge {:port 8080} options))))
