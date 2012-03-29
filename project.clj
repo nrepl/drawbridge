@@ -8,5 +8,7 @@
                  [org.clojure/tools.nrepl "0.2.0-SNAPSHOT"]
                  [ring/ring-core "1.0.2"]
                  [cheshire "3.0.0"]
-                 [clj-http "0.3.4" :optional true]]
+                 
+                 ; client
+                 [clj-http "0.3.4"]]
   :dev-dependencies [[ring "1.0.0"]])

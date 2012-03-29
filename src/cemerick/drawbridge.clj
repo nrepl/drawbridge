@@ -4,9 +4,11 @@
                                  [server :as server])
             [cheshire.core :as json]
             [ring.util.response :as response]
-            clojure.walk)
+            clojure.walk
+            [clojure.java.io :as io]
+            [clj-http.client :as http])
   (:use (ring.middleware params keyword-params nested-params session))
-  (:import java.util.concurrent.LinkedBlockingQueue))
+  (:import (java.util.concurrent LinkedBlockingQueue TimeUnit)))
 
 (def ^{:private true} message-post-error
   {:status 405
@@ -29,6 +31,7 @@
   [& {:keys [nrepl-handler default-read-timeout]
       :or {nrepl-handler (server/default-handler)
            default-read-timeout 1000}}]
+  ;; TODO heartbeat for continuous feeding mode
   (fn [{:keys [params session headers request-method]}]
     (let [msg (clojure.walk/keywordize-keys params)]
       (if (and (:op msg) (not= :post request-method))
@@ -52,4 +55,24 @@
 (require 'ring.adapter.jetty)
 (defonce server (ring.adapter.jetty/run-jetty #'app {:port 8080 :join? false}))
 
-
+(defn ring-client-transport
+  [url]
+  (let [incoming (LinkedBlockingQueue.)
+        fill #(when-let [responses (->> (io/reader %)
+                                     line-seq
+                                     rest
+                                     drop-last
+                                     (map json/parse-string)
+                                     (remove nil?)
+                                     seq)]
+                (.addAll incoming responses))]
+    (clojure.tools.nrepl.transport.FnTransport.
+      (fn read [timeout]
+        (let [t (System/currentTimeMillis)]
+          (or (.poll incoming 0 TimeUnit/MILLISECONDS)
+              (when (pos? timeout)
+                (fill (:body (http/get url {:as :stream})))
+                (recur (- timeout (- (System/currentTimeMillis) t)))))))
+      (fn write [msg]
+        (fill (:body (http/post url {:form-params msg :as :stream}))))
+      (fn close []))))
