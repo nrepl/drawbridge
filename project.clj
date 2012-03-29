@@ -11,4 +11,7 @@
                  
                  ; client
                  [clj-http "0.3.4"]]
-  :dev-dependencies [[ring "1.0.0"]])
+  :dev-dependencies [[ring "1.0.0"]]
+  :profiles {:dev {:dependencies [[ring "1.0.0"]]}
+             :1.2 {:dependencies [[org.clojure/clojure "1.2.0"]]}
+             :1.4 {:dependencies [[org.clojure/clojure "1.4.0-beta5"]]}})
