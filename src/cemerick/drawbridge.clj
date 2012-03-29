@@ -46,14 +46,14 @@
                 (future (server/handle* msg nrepl-handler write)))
               (client))))))))
 
-(def app (-> (ring-handler)
+#_(def app (-> (ring-handler)
            wrap-keyword-params
            wrap-nested-params
            wrap-params
            wrap-session))
 
-(require 'ring.adapter.jetty)
-(defonce server (ring.adapter.jetty/run-jetty #'app {:port 8080 :join? false}))
+#_(require 'ring.adapter.jetty)
+#_(defonce server (ring.adapter.jetty/run-jetty #'app {:port 8080 :join? false}))
 
 (defn ring-client-transport
   [url]
