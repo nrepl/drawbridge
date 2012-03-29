@@ -1,6 +1,6 @@
 (defproject com.cemerick/drawbridge "0.0.1-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+  :description "HTTP transport support for Clojure's nREPL implemented as a Ring handler."
+  :url "http://github.com/cemerick/drawbridge"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :repositories {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"}
