@@ -146,12 +146,14 @@
 (.addMethod nrepl/url-connect "http" #'ring-client-transport)
 (.addMethod nrepl/url-connect "https" #'ring-client-transport)
 
-(comment
-  (def app (-> (ring-handler)
-             wrap-keyword-params
-             wrap-nested-params
-             wrap-params
-             wrap-session))
-  
-  (require 'ring.adapter.jetty)
-  (defonce server (ring.adapter.jetty/run-jetty #'app {:port 8080 :join? false})))
+;; as an example:
+(defn -main [& args]
+  (let [options (walk/keywordize-keys (apply hash-map args))
+        app (-> (ring-handler)
+              wrap-keyword-params
+              wrap-nested-params
+              wrap-params
+              wrap-session)
+        run-jetty (ns-resolve (doto 'ring.adapter.jetty require) 'run-jetty)]
+    (run-jetty app (merge {:port 8080} options))))
+
