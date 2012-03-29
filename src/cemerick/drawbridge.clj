@@ -31,18 +31,16 @@
            default-read-timeout 1000}}]
   (fn [{:keys [params session headers request-method]}]
     (let [msg (clojure.walk/keywordize-keys params)]
-      (if (and (:op msg)
-               (not= :post request-method))
+      (if (and (:op msg) (not= :post request-method))
         message-post-error        
         (let [[read write :as transport] (or (::transport session)
                                              (transport/piped-transports))
               client (or (::client session)
                          (nrepl/client read (get headers "REPL-Timeout" default-read-timeout)))]
           (response transport client
-            (if (:op msg)
-              (let [seq (nrepl/message client msg)]
-                (future (server/handle* (transport/recv write) nrepl-handler write))
-                seq)
+            (do
+              (when (:op msg)
+                (future (server/handle* msg nrepl-handler write)))
               (client))))))))
 
 (def app (-> (ring-handler)
