@@ -148,7 +148,7 @@
 
 ;; as an example:
 (defn -main [& args]
-  (let [options (walk/keywordize-keys (apply hash-map args))
+  (let [options (clojure.walk/keywordize-keys (apply hash-map args))
         app (-> (ring-handler)
               wrap-keyword-params
               wrap-nested-params
