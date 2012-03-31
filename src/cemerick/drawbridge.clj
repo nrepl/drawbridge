@@ -92,7 +92,8 @@
       :or {nrepl-handler (server/default-handler)
            default-read-timeout 0}}]
   ;; TODO heartbeat for continuous feeding mode
-  (fn [{:keys [params session headers request-method]}]
+  (fn [{:keys [params session headers request-method] :as request}]
+    ;(println params session)
     (let [msg (clojure.walk/keywordize-keys params)]
       (cond
         (not (#{:post :get} request-method)) illegal-method-error
@@ -130,17 +131,24 @@
                                      (map json/parse-string)
                                      (remove nil?)
                                      seq)]
-                (.addAll incoming responses))]
+                (.addAll incoming responses))
+        session-cookies (atom nil)
+        http (fn [& [msg]]
+               (let [{:keys [cookies body] :as resp} ((if msg http/post http/get)
+                                                       url
+                                                       (merge {:as :stream
+                                                               :cookies @session-cookies}
+                                                              (when msg {:form-params msg})))]
+                 (swap! session-cookies merge cookies)
+                 (fill body)))]
     (clojure.tools.nrepl.transport.FnTransport.
       (fn read [timeout]
         (let [t (System/currentTimeMillis)]
           (or (.poll incoming 0 TimeUnit/MILLISECONDS)
               (when (pos? timeout)
-                (fill (:body (http/get url {:as :stream})))
+                (http)
                 (recur (- timeout (- (System/currentTimeMillis) t)))))))
-      (fn write [msg]
-        (fill (:body (http/post url {:form-params msg
-                                     :as :stream}))))
+      http
       (fn close []))))
 
 (.addMethod nrepl/url-connect "http" #'ring-client-transport)
