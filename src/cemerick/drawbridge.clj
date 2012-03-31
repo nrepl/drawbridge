@@ -13,10 +13,10 @@
             (clojure.tools.nrepl [transport :as transport]
                                  [server :as server])
             [cheshire.core :as json]
+            [clj-http.client :as http]
             [ring.util.response :as response]
             clojure.walk
-            [clojure.java.io :as io]
-            [clj-http.client :as http])
+            [clojure.java.io :as io])
   (:use (ring.middleware params keyword-params nested-params session))
   (:import (java.util.concurrent LinkedBlockingQueue TimeUnit)))
 
@@ -103,7 +103,7 @@
         (let [[read write :as transport] (or (::transport session)
                                              (transport/piped-transports))
               client (or (::client session)
-                         (nrepl/client read (if-let [timeout (get headers (.toLowerCase response-timeout-header*))]
+                         (nrepl/client read (if-let [timeout (get headers response-timeout-header*)]
                                               (Long/parseLong timeout)
                                               default-read-timeout)))]
           (response transport client
@@ -146,14 +146,16 @@
 (.addMethod nrepl/url-connect "http" #'ring-client-transport)
 (.addMethod nrepl/url-connect "https" #'ring-client-transport)
 
+;; enable easy interactive debugging of typical usage
+(def ^{:private true} app (-> (ring-handler)
+                            wrap-keyword-params
+                            wrap-nested-params
+                            wrap-params
+                            wrap-session))
+
 ;; as an example:
 (defn -main [& args]
   (let [options (clojure.walk/keywordize-keys (apply hash-map args))
-        app (-> (ring-handler)
-              wrap-keyword-params
-              wrap-nested-params
-              wrap-params
-              wrap-session)
         run-jetty (ns-resolve (doto 'ring.adapter.jetty require) 'run-jetty)]
-    (run-jetty app (merge {:port 8080} options))))
+    (run-jetty #'app (merge {:port 8080} options))))
 
