@@ -165,5 +165,5 @@
 (defn -main [& args]
   (let [options (clojure.walk/keywordize-keys (apply hash-map args))
         run-jetty (ns-resolve (doto 'ring.adapter.jetty require) 'run-jetty)]
-    (run-jetty #'app (merge {:port 8080} options))))
+    (run-jetty #'app (merge {:port 0} options))))
 
