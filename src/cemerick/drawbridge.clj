@@ -132,11 +132,16 @@
                                      (remove nil?)
                                      seq)]
                 (.addAll incoming responses))
+        ;; Ideally basic-auth would be handled by clj-http:
+        ;; https://github.com/dakrone/clj-http/issues/60
+        user-info (.getUserInfo (java.net.URL. url))
+        basic-auth (and user-info (.split user-info ":"))
         session-cookies (atom nil)
         http (fn [& [msg]]
                (let [{:keys [cookies body] :as resp} ((if msg http/post http/get)
                                                        url
                                                        (merge {:as :stream
+                                                               :basic-auth basic-auth
                                                                :cookies @session-cookies}
                                                               (when msg {:form-params msg})))]
                  (swap! session-cookies merge cookies)
