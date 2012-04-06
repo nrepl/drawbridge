@@ -8,9 +8,9 @@
                  [org.clojure/tools.nrepl "0.2.0-beta5"]
                  [ring/ring-core "1.0.2"]
                  [cheshire "3.0.0"]
-                 
-                 ; client
-                 [clj-http "0.3.4"]]
+
+                 ;; client
+                 [clj-http "0.3.6"]]
   :dev-dependencies [[ring "1.0.0"]]
   :profiles {:dev {:dependencies [[ring "1.0.0"]]
                    :plugins [[lein-clojars "0.8.0"]]}
