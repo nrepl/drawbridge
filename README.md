@@ -89,7 +89,7 @@ non-Clojure nREPL clients, you'll want to review the documentation for
 ### In Clojure tooling
 
 Drawbridge also provides a client-side nREPL transport implementation
-for the Ring handler in `cemerick.drawbridge/ring-client-transport`.
+for the Ring handler in `cemerick.drawbridge.client/ring-client-transport`.
 
 Note that the `cemerick.drawbridge` namespace implicitly adds
 implementations to the `clojure.tools.nrepl/url-connect` multimethod for
