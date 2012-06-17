@@ -12,7 +12,7 @@
                  [clj-http "0.3.6"]]
   :dev-dependencies [[ring "1.0.0"]]
   :profiles {:dev {:dependencies [[ring "1.0.0"]]
-                   :plugins [[lein-clojars "0.8.0"]]}
+                   :plugins [[lein-clojars "0.9.0"]]}
              :1.3 {:dependencies [[org.clojure/clojure "1.3.0"]]}
              :1.4 {:dependencies [[org.clojure/clojure "1.4.0"]]}}
   :main ^{:skip-aot true} cemerick.drawbridge)
