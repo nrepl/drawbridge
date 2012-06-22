@@ -40,7 +40,7 @@
    :headers {"Content-Type" "application/json"}
    :body (concat ["[\n"]
                  (->> (map json/generate-string response-seq)
-                   (interpose "\n"))
+                   (interpose ",\n"))
                  ["\n]"])})
 
 (def response-timeout-header "REPL-Response-Timeout")
