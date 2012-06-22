@@ -1,4 +1,4 @@
-(defproject com.cemerick/drawbridge "0.0.5-SNAPSHOT"
+(defproject com.cemerick/drawbridge "0.0.6"
   :description "HTTP transport support for Clojure's nREPL implemented as a Ring handler."
   :url "http://github.com/cemerick/drawbridge"
   :license {:name "Eclipse Public License"
