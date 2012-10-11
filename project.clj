@@ -6,10 +6,10 @@
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.clojure/tools.nrepl "0.2.0-beta5"]
                  [ring/ring-core "1.0.2"]
-                 [cheshire "3.0.0"]
+                 [cheshire "4.0.3"]
 
                  ;; client
-                 [clj-http "0.3.6"]]
+                 [clj-http-lite "0.2.0"]]
   :dev-dependencies [[ring "1.0.0"]]
   :profiles {:dev {:dependencies [[ring "1.0.0"]]
                    :plugins [[lein-clojars "0.9.0"]]}
