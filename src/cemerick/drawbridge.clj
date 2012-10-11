@@ -13,7 +13,6 @@
             (clojure.tools.nrepl [transport :as transport]
                                  [server :as server])
             [cheshire.core :as json]
-            [clj-http.client :as http]
             [ring.util.response :as response]
             clojure.walk
             [clojure.java.io :as io])

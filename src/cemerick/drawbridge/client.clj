@@ -2,7 +2,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.tools.nrepl :as nrepl]
-            [clj-http.client :as http])
+            [clj-http.lite.client :as http])
   (:import (java.util.concurrent LinkedBlockingQueue TimeUnit)))
 
 (defn ring-client-transport
