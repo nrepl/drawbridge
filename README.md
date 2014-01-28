@@ -55,7 +55,7 @@ such:
 (require 'cemerick.drawbridge)
 
 (let [nrepl-handler (cemerick.drawbridge/ring-handler)]
-  (ANY "/repl" request (nrepl-handler request)))
+  (ANY "/repl" request (ring-handler request)))
 ```
 
 With this, any HTTP or HTTPS client can send nREPL messages to the
