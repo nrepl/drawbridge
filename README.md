@@ -66,7 +66,7 @@ authentication or authorization to some application-specific role, those
 prerequisites will apply just as with any other Ring handler in the same
 context.
 
-Some things to be aware of when using `cemerick.drawbridge/ring-handler`: 
+Some things to be aware of when using `cemerick.drawbridge/ring-handler`:
 
  * It requires `GET` and `POST` requests
    to be routed to whatever URI to which it is mapped; other request
@@ -75,7 +75,6 @@ Some things to be aware of when using `cemerick.drawbridge/ring-handler`:
    * `keyword-params`
    * `nested-params`
    * `wrap-params`
-   * `wrap-session`
 
 Especially if you are going to be connecting to your webapp's nREPL
 endpoint with a client that uses Drawbridge's own HTTP/HTTPS client
@@ -111,7 +110,7 @@ yet been addressed at all.
 ## Need Help?
 
 Send a message to the [clojure-tools](http://groups.google.com/group/clojure-tools)
-mailing list, or ping `cemerick` on freenode irc or 
+mailing list, or ping `cemerick` on freenode irc or
 [twitter](http://twitter.com/cemerick) if you have questions
 or would like to contribute patches.
 

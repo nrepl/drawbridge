@@ -8,12 +8,13 @@
 
 (ns ^{:doc "HTTP transport support for Clojure's nREPL implemented as a Ring handler."
       :author "Chas Emerick"}
-     cemerick.drawbridge
+  cemerick.drawbridge
   (:require [clojure.tools.nrepl :as nrepl]
             (clojure.tools.nrepl [transport :as transport]
                                  [server :as server])
             [cheshire.core :as json]
             [clj-http.client :as http]
+            [ring.middleware.session.memory :as mem]
             [ring.util.response :as response]
             clojure.walk
             [clojure.java.io :as io])
@@ -46,6 +47,15 @@
 (def response-timeout-header "REPL-Response-Timeout")
 (def ^{:private true} response-timeout-header* (.toLowerCase response-timeout-header))
 
+(defn memory-session
+  "Wraps the supplied handler in session middleware that uses a
+  private memory store. Use the `:cookie-name` option to customize the
+  cookie used here. The cookie name defaults to
+  \"drawbridge-session\"."
+  [handler & {:keys [cookie-name] :or {cookie-name "drawbridge-session"}}]
+  (let [store (mem/memory-store)]
+    (wrap-session handler {:store store :cookie-name cookie-name})))
+
 (defn ring-handler
   "Returns a Ring handler implementing an HTTP transport endpoint for nREPL.
 
@@ -55,9 +65,8 @@
      * keyword-params
      * nested-params
      * wrap-params
-     * wrap-session
 
-   a.k.a. the Compojure \"api\" stack, plus sessions.
+   a.k.a. the Compojure \"api\" stack.
 
    nREPL messages should be encoded into POST request parameters; messages
    are only accepted from POST parameters.
@@ -68,7 +77,7 @@
      * the handler is created with a non-zero :default-read-timeout, or
      * a session's first request to the handler specifies a non-zero
        timeout via a REPL-Response-Timeout header
- 
+
    ...then each request will wait the specified number of milliseconds for
    additional nREPL responses before finalizing the response.
 
@@ -88,41 +97,41 @@
    evaluation, sessions, readably-printed evaluation values, and
    prompting for *in* input.  Please refer to the main nREPL documentation
    for details on semantics and message schemas for these middlewares."
-  [& {:keys [nrepl-handler default-read-timeout]
+  [& {:keys [nrepl-handler default-read-timeout cookie-name]
       :or {nrepl-handler (server/default-handler)
-           default-read-timeout 0}}]
+           default-read-timeout 0
+           cookie-name "drawbridge-session"}}]
   ;; TODO heartbeat for continuous feeding mode
-  (fn [{:keys [params session headers request-method] :as request}]
-    ;(println params session)
-    (let [msg (clojure.walk/keywordize-keys params)]
-      (cond
-        (not (#{:post :get} request-method)) illegal-method-error
-        
-        (and (:op msg) (not= :post request-method)) message-post-error
-        
-        :else
-        (let [[read write :as transport] (or (::transport session)
-                                             (transport/piped-transports))
-              client (or (::client session)
-                         (nrepl/client read (if-let [timeout (get headers response-timeout-header*)]
-                                              (Long/parseLong timeout)
-                                              default-read-timeout)))]
-          (response transport client
-            (do
-              (when (:op msg)
-                (future (server/handle* msg nrepl-handler write)))
-              (client))))))))
+  (-> (fn [{:keys [params session headers request-method] :as request}]
+                                        ;(println params session)
+        (let [msg (clojure.walk/keywordize-keys params)]
+          (cond
+           (not (#{:post :get} request-method)) illegal-method-error
+
+           (and (:op msg) (not= :post request-method)) message-post-error
+
+           :else
+           (let [[read write :as transport] (or (::transport session)
+                                                (transport/piped-transports))
+                 client (or (::client session)
+                            (nrepl/client read (if-let [timeout (get headers response-timeout-header*)]
+                                                 (Long/parseLong timeout)
+                                                 default-read-timeout)))]
+             (response transport client
+                       (do
+                         (when (:op msg)
+                           (future (server/handle* msg nrepl-handler write)))
+                         (client)))))))
+      (memory-session :cookie-name cookie-name)))
 
 ;; enable easy interactive debugging of typical usage
 (def ^{:private true} app (-> (ring-handler)
                             wrap-keyword-params
                             wrap-nested-params
-                            wrap-params
-                            wrap-session))
+                            wrap-params))
 
 ;; as an example:
 (defn -main [& args]
   (let [options (clojure.walk/keywordize-keys (apply hash-map args))
         run-jetty (ns-resolve (doto 'ring.adapter.jetty require) 'run-jetty)]
     (run-jetty #'app (merge {:port 0} options))))
-
