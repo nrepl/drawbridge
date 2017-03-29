@@ -4,11 +4,6 @@ HTTP transport support for Clojure's
 [nREPL](http://github.com/clojure/tools.nrepl) implemented as a
 [Ring](http://github.com/mmcgrana/ring) handler.
 
-## Status
-
-This is brand new.  There are surely bugs, and things will break and
-change.
-
 ## Installation
 
 Drawbridge is available in Clojars. Add this `:dependency` to your Leiningen
@@ -33,7 +28,7 @@ Or, add this to your Maven project's `pom.xml`:
 </dependency>
 ```
 
-Drawbridge is compatible with Clojure 1.2.0 - 1.4.0.
+Drawbridge is compatible with Clojure 1.2.0+.
 
 ## Usage
 
