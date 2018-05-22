@@ -1,3 +1,5 @@
+[![Clojars Project](https://img.shields.io/clojars/v/nrepl/drawbridge.svg)](https://clojars.org/nrepl/drawbridge)
+
 # Drawbridge
 
 HTTP transport support for Clojure's
