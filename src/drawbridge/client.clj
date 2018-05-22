@@ -1,7 +1,7 @@
 (ns drawbridge.client
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
-            [clojure.tools.nrepl :as nrepl]
+            [nrepl.core :as nrepl]
             [clj-http.client :as http])
   (:import (java.util.concurrent LinkedBlockingQueue TimeUnit)))
 

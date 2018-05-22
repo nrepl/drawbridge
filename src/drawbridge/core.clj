@@ -9,9 +9,9 @@
 (ns ^{:doc "HTTP transport support for Clojure's nREPL implemented as a Ring handler."
       :author "Chas Emerick"}
   drawbridge.core
-  (:require [clojure.tools.nrepl :as nrepl]
-            (clojure.tools.nrepl [transport :as transport]
-                                 [server :as server])
+  (:require [nrepl.core :as nrepl]
+            (nrepl [transport :as transport]
+                   [server :as server])
             [cheshire.core :as json]
             [clj-http.client :as http]
             [ring.middleware.session.memory :as mem]
@@ -92,7 +92,7 @@
 
    A custom nREPL handler may be specified when creating the handler via
    :nrepl-handler.  The default
-   (via `(clojure.tools.nrepl.server/default-handler)`) is appropriate
+   (via `(nrepl.server/default-handler)`) is appropriate
    for textual REPL interactions, and includes support for interruptable
    evaluation, sessions, readably-printed evaluation values, and
    prompting for *in* input.  Please refer to the main nREPL documentation
