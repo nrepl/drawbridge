@@ -6,9 +6,9 @@
 ;; the terms of this license.
 ;; You must not remove this notice, or any other, from this software.
 
-(ns ^{:doc "HTTP transport support for Clojure's nREPL implemented as a Ring handler."
-      :author "Chas Emerick"}
-  drawbridge.core
+(ns drawbridge.core
+  "HTTP transport support for Clojure's nREPL implemented as a Ring handler."
+  {:author "Chas Emerick"}
   (:require [nrepl.core :as nrepl]
             (nrepl [transport :as transport]
                    [server :as server])
