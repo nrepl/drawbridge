@@ -19,5 +19,4 @@
   :dev-dependencies [[ring "1.0.0"]]
   :profiles {:dev {:dependencies [[ring "1.0.0"]]}
              :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}
-             :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}}
-  :main ^{:skip-aot true} drawbridge.core)
+             :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}})
