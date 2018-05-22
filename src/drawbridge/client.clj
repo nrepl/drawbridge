@@ -17,31 +17,31 @@
   [url]
   (let [incoming (LinkedBlockingQueue.)
         fill #(when-let [responses (->> (io/reader %)
-                                     line-seq
-                                     rest
-                                     drop-last
-                                     (map json/parse-string)
-                                     (remove nil?)
-                                     seq)]
+                                        line-seq
+                                        rest
+                                        drop-last
+                                        (map json/parse-string)
+                                        (remove nil?)
+                                        seq)]
                 (.addAll incoming responses))
         session-cookies (atom nil)
         http (fn [& [msg]]
                (let [{:keys [cookies body] :as resp} ((if msg http/post http/get)
-                                                       url
-                                                       (merge {:as :stream
-                                                               :cookies @session-cookies}
-                                                              (when msg {:form-params msg})))]
+                                                      url
+                                                      (merge {:as :stream
+                                                              :cookies @session-cookies}
+                                                             (when msg {:form-params msg})))]
                  (swap! session-cookies merge cookies)
                  (fill body)))]
     (nrepl.transport.FnTransport.
-      (fn read [timeout]
-        (let [t (System/currentTimeMillis)]
-          (or (.poll incoming 0 TimeUnit/MILLISECONDS)
-              (when (pos? timeout)
-                (http)
-                (recur (- timeout (- (System/currentTimeMillis) t)))))))
-      http
-      (fn close []))))
+     (fn read [timeout]
+       (let [t (System/currentTimeMillis)]
+         (or (.poll incoming 0 TimeUnit/MILLISECONDS)
+             (when (pos? timeout)
+               (http)
+               (recur (- timeout (- (System/currentTimeMillis) t)))))))
+     http
+     (fn close []))))
 
 (.addMethod nrepl/url-connect "http" #'ring-client-transport)
 (.addMethod nrepl/url-connect "https" #'ring-client-transport)

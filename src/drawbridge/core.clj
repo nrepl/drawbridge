@@ -41,7 +41,7 @@
    :headers {"Content-Type" "application/json"}
    :body (concat ["[\n"]
                  (->> (map json/generate-string response-seq)
-                   (interpose ",\n"))
+                      (interpose ",\n"))
                  ["\n]"])})
 
 (def response-timeout-header "REPL-Response-Timeout")
@@ -106,29 +106,29 @@
                                         ;(println params session)
         (let [msg (clojure.walk/keywordize-keys params)]
           (cond
-           (not (#{:post :get} request-method)) illegal-method-error
+            (not (#{:post :get} request-method)) illegal-method-error
 
-           (and (:op msg) (not= :post request-method)) message-post-error
+            (and (:op msg) (not= :post request-method)) message-post-error
 
-           :else
-           (let [[read write :as transport] (or (::transport session)
-                                                (transport/piped-transports))
-                 client (or (::client session)
-                            (nrepl/client read (if-let [timeout (get headers response-timeout-header*)]
-                                                 (Long/parseLong timeout)
-                                                 default-read-timeout)))]
-             (response transport client
-                       (do
-                         (when (:op msg)
-                           (future (server/handle* msg nrepl-handler write)))
-                         (client)))))))
+            :else
+            (let [[read write :as transport] (or (::transport session)
+                                                 (transport/piped-transports))
+                  client (or (::client session)
+                             (nrepl/client read (if-let [timeout (get headers response-timeout-header*)]
+                                                  (Long/parseLong timeout)
+                                                  default-read-timeout)))]
+              (response transport client
+                        (do
+                          (when (:op msg)
+                            (future (server/handle* msg nrepl-handler write)))
+                          (client)))))))
       (memory-session :cookie-name cookie-name)))
 
 ;; enable easy interactive debugging of typical usage
 (def ^{:private true} app (-> (ring-handler)
-                            wrap-keyword-params
-                            wrap-nested-params
-                            wrap-params))
+                              wrap-keyword-params
+                              wrap-nested-params
+                              wrap-params))
 
 ;; as an example:
 (defn -main [& args]
