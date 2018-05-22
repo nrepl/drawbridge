@@ -10,9 +10,14 @@
 
                  ;; client
                  [clj-http "0.3.6"]]
+
+  :deploy-repositories [["clojars" {:url "https://clojars.org/repo"
+                                    :username :env/clojars_username
+                                    :password :env/clojars_password
+                                    :sign-releases false}]]
+
   :dev-dependencies [[ring "1.0.0"]]
-  :profiles {:dev {:dependencies [[ring "1.0.0"]]
-                   :plugins [[lein-clojars "0.9.0"]]}
+  :profiles {:dev {:dependencies [[ring "1.0.0"]]}
              :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}
              :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}}
   :main ^{:skip-aot true} drawbridge.core)
