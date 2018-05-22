@@ -28,7 +28,7 @@ Or, add this to your Maven project's `pom.xml`:
 </dependency>
 ```
 
-Drawbridge is compatible with Clojure 1.2.0+.
+Drawbridge is compatible with Clojure 1.2.0+ and nREPL 0.4+.
 
 ## Usage
 
