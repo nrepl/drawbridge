@@ -1,4 +1,4 @@
-(ns cemerick.drawbridge.client
+(ns drawbridge.client
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.tools.nrepl :as nrepl]
@@ -45,4 +45,3 @@
 
 (.addMethod nrepl/url-connect "http" #'ring-client-transport)
 (.addMethod nrepl/url-connect "https" #'ring-client-transport)
-

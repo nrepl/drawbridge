@@ -8,7 +8,7 @@
 
 (ns ^{:doc "HTTP transport support for Clojure's nREPL implemented as a Ring handler."
       :author "Chas Emerick"}
-  cemerick.drawbridge
+  drawbridge.core
   (:require [clojure.tools.nrepl :as nrepl]
             (clojure.tools.nrepl [transport :as transport]
                                  [server :as server])

@@ -1,8 +1,8 @@
 # Drawbridge
 
 HTTP transport support for Clojure's
-[nREPL](http://github.com/clojure/tools.nrepl) implemented as a
-[Ring](http://github.com/mmcgrana/ring) handler.
+[nREPL](http://github.com/nrepl/nrepl) implemented as a
+[Ring](http://github.com/ring-clojure/ring) handler.
 
 ## Installation
 
@@ -10,7 +10,7 @@ Drawbridge is available in Clojars. Add this `:dependency` to your Leiningen
 `project.clj`:
 
 ```clojure
-[com.cemerick/drawbridge "0.0.7"]
+[nrepl/drawbridge "0.1.0"]
 ```
 
 Or, add this to your Maven project's `pom.xml`:
@@ -22,9 +22,9 @@ Or, add this to your Maven project's `pom.xml`:
 </repository>
 
 <dependency>
-  <groupId>com.cemerick</groupId>
+  <groupId>nrepl</groupId>
   <artifactId>drawbridge</artifactId>
-  <version>0.0.7</version>
+  <version>0.1.0</version>
 </dependency>
 ```
 
@@ -47,9 +47,9 @@ add its Ring handler to your application.  For example, if you're using
 such:
 
 ```clojure
-(require 'cemerick.drawbridge)
+(require 'drawbridge.core)
 
-(let [nrepl-handler (cemerick.drawbridge/ring-handler)]
+(let [nrepl-handler (drawbridge.core/ring-handler)]
   (ANY "/repl" request (nrepl-handler request)))
 ```
 
@@ -61,7 +61,7 @@ authentication or authorization to some application-specific role, those
 prerequisites will apply just as with any other Ring handler in the same
 context.
 
-Some things to be aware of when using `cemerick.drawbridge/ring-handler`:
+Some things to be aware of when using `drawbridge.core/ring-handler`:
 
  * It requires `GET` and `POST` requests
    to be routed to whatever URI to which it is mapped; other request
@@ -83,9 +83,9 @@ non-Clojure nREPL clients, you'll want to review the documentation for
 ### In Clojure tooling
 
 Drawbridge also provides a client-side nREPL transport implementation
-for the Ring handler in `cemerick.drawbridge.client/ring-client-transport`.
+for the Ring handler in `drawbridge.client/ring-client-transport`.
 
-Note that the `cemerick.drawbridge.client` namespace implicitly adds
+Note that the `drawbridge.client` namespace implicitly adds
 implementations to the `clojure.tools.nrepl/url-connect` multimethod for
 `"http"` and `"https"` schemes. So, once this namespace is loaded, any
 tool that uses `url-connect` will use `ring-client-transport` for
@@ -111,6 +111,6 @@ or would like to contribute patches.
 
 ## License
 
-Copyright © 2012 Chas Emerick and other contributors.
+Copyright © 2012-2018 Chas Emerick, Bozhidar Batsov and other contributors.
 
 Distributed under the Eclipse Public License, the same as Clojure.
