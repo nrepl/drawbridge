@@ -88,7 +88,7 @@ Drawbridge also provides a client-side nREPL transport implementation
 for the Ring handler in `drawbridge.client/ring-client-transport`.
 
 Note that the `drawbridge.client` namespace implicitly adds
-implementations to the `clojure.tools.nrepl/url-connect` multimethod for
+implementations to the `nrepl.core/url-connect` multimethod for
 `"http"` and `"https"` schemes. So, once this namespace is loaded, any
 tool that uses `url-connect` will use `ring-client-transport` for
 connecting to HTTP and HTTPS nREPL endpoints.
