@@ -9,10 +9,7 @@
 (ns drawbridge.core
   "HTTP transport support for Clojure's nREPL implemented as a Ring handler."
   {:author "Chas Emerick"}
-  (:require [nrepl.core :as nrepl]
-            (nrepl [transport :as transport]
-                   [server :as server])
-            [cheshire.core :as json]
+  (:require [cheshire.core :as json]
             [clj-http.client :as http]
             [ring.middleware.session.memory :as mem]
             [ring.util.response :as response]
@@ -20,6 +17,19 @@
             [clojure.java.io :as io])
   (:use (ring.middleware params keyword-params nested-params session))
   (:import (java.util.concurrent LinkedBlockingQueue TimeUnit)))
+
+;; Compatibility with the legacy tools.nrepl and the new nREPL 0.4.x.
+;; The assumption is that if someone is using old lein repl or boot repl
+;; they'll end up using the tools.nrepl, otherwise the modern one.
+(if (find-ns 'clojure.tools.nrepl)
+  (require
+   '[clojure.tools.nrepl :as nrepl]
+   '[clojure.tools.nrepl.server :as server]
+   '[clojure.tools.nrepl.transport :as transport])
+  (require
+   '[nrepl.core :as nrepl]
+   '[nrepl.server :as server]
+   '[nrepl.transport :as transport]))
 
 (def ^{:private true} message-post-error
   {:status 405

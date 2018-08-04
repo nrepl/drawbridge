@@ -5,6 +5,17 @@
             [clj-http.client :as http])
   (:import (java.util.concurrent LinkedBlockingQueue TimeUnit)))
 
+;; Compatibility with the legacy tools.nrepl and the new nREPL 0.4.x.
+;; The assumption is that if someone is using old lein repl or boot repl
+;; they'll end up using the tools.nrepl, otherwise the modern one.
+(if (find-ns 'clojure.tools.nrepl)
+  (require
+   '[clojure.tools.nrepl :as nrepl]
+   '[clojure.tools.nrepl.transport :as transport])
+  (require
+   '[nrepl.core :as nrepl]
+   '[nrepl.transport :as transport]))
+
 (defn ring-client-transport
   "Returns an nREPL client-side transport to connect to HTTP nREPL
    endpoints implemented by `ring-handler`.
@@ -33,7 +44,7 @@
                                                              (when msg {:form-params msg})))]
                  (swap! session-cookies merge cookies)
                  (fill body)))]
-    (nrepl.transport.FnTransport.
+    (transport/FnTransport.
      (fn read [timeout]
        (let [t (System/currentTimeMillis)]
          (or (.poll incoming 0 TimeUnit/MILLISECONDS)
