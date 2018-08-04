@@ -1,4 +1,4 @@
-(defproject nrepl/drawbridge "0.1.2"
+(defproject nrepl/drawbridge "0.1.3"
   :description "HTTP transport support for Clojure's nREPL implemented as a Ring handler."
   :url "http://github.com/nrepl/drawbridge"
   :license {:name "Eclipse Public License"
