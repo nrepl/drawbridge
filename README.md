@@ -8,11 +8,14 @@ HTTP transport support for Clojure's
 
 ## Installation
 
+**Note: The coordinates of the project changes from `cemerick/drawbridge` to
+`nrepl/drawbridge` in version 0.1.**
+
 Drawbridge is available in Clojars. Add this `:dependency` to your Leiningen
 `project.clj`:
 
 ```clojure
-[nrepl/drawbridge "0.1.1"]
+[nrepl/drawbridge "0.1.2"]
 ```
 
 Or, add this to your Maven project's `pom.xml`:
@@ -30,7 +33,15 @@ Or, add this to your Maven project's `pom.xml`:
 </dependency>
 ```
 
-Drawbridge is compatible with Clojure 1.2.0+ and nREPL 0.4+.
+**Drawbridge is compatible with Clojure 1.7.0+ and nREPL 0.2+.**
+
+### Upgrade notes
+
+If you're upgrading from 0.0.7 keep in mind that the namespaces of the
+project were changed as following:
+
+* `cemerick.drawbridge` -> `drawbridge.core`
+* `cemerick.drawbridge.client` -> `drawbridge.client`
 
 ## Usage
 
