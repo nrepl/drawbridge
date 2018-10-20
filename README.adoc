@@ -1,26 +1,30 @@
-[![Clojars Project](https://img.shields.io/clojars/v/nrepl/drawbridge.svg)](https://clojars.org/nrepl/drawbridge)
+:doctype: book
 
-# Drawbridge
+image::https://img.shields.io/clojars/v/nrepl/drawbridge.svg[Clojars Project,link=https://clojars.org/nrepl/drawbridge]
+
+= Drawbridge
 
 HTTP transport support for Clojure's
-[nREPL](http://github.com/nrepl/nrepl) implemented as a
-[Ring](http://github.com/ring-clojure/ring) handler.
+http://github.com/nrepl/nrepl[nREPL] implemented as a
+http://github.com/ring-clojure/ring[Ring] handler.
 
-## Installation
+== Installation
 
-**Note: The coordinates of the project changes from `cemerick/drawbridge` to
-`nrepl/drawbridge` in version 0.1.**
+NOTE: The coordinates of the project changed from `cemerick/drawbridge` to
+`nrepl/drawbridge` in version 0.1.
 
 Drawbridge is available in Clojars. Add this `:dependency` to your Leiningen
 `project.clj`:
 
-```clojure
+[source,clojure]
+----
 [nrepl/drawbridge "0.1.3"]
-```
+----
 
 Or, add this to your Maven project's `pom.xml`:
 
-```xml
+[source,xml]
+----
 <repository>
   <id>clojars</id>
   <url>http://clojars.org/repo</url>
@@ -31,19 +35,19 @@ Or, add this to your Maven project's `pom.xml`:
   <artifactId>drawbridge</artifactId>
   <version>0.1.1</version>
 </dependency>
-```
+----
 
-**Drawbridge is compatible with Clojure 1.7.0+ and nREPL 0.2+.**
+NOTE: Drawbridge is compatible with Clojure 1.7.0+ and nREPL 0.2+.
 
-### Upgrade notes
+=== Upgrade notes
 
 If you're upgrading from 0.0.7 keep in mind that the namespaces of the
 project were changed as following:
 
-* `cemerick.drawbridge` -> `drawbridge.core`
-* `cemerick.drawbridge.client` -> `drawbridge.client`
+* `cemerick.drawbridge` \-> `drawbridge.core`
+* `cemerick.drawbridge.client` \-> `drawbridge.client`
 
-## Usage
+== Usage
 
 While nREPL provides a solid REPL backend for Clojure, typical
 socket-based channels are often unsuitable.  Being able to deploy
@@ -52,19 +56,20 @@ configuration and can alleviate security concerns, and works around
 limitations in various deployment environments where traditional
 socket-based channels are limited or entirely unavailable.
 
-### In a Ring web application
+=== In a Ring web application
 
 Once you have added Drawbridge to your project's dependencies, just
 add its Ring handler to your application.  For example, if you're using
-[Compojure](https://github.com/weavejester/compojure) for routing and
+https://github.com/weavejester/compojure[Compojure] for routing and
 such:
 
-```clojure
+[source,clojure]
+----
 (require 'drawbridge.core)
 
 (let [nrepl-handler (drawbridge.core/ring-handler)]
   (ANY "/repl" request (nrepl-handler request)))
-```
+----
 
 With this, any HTTP or HTTPS client can send nREPL messages to the
 `/repl` URI, and read responses from the same.  Conveniently, any
@@ -76,13 +81,13 @@ context.
 
 Some things to be aware of when using `drawbridge.core/ring-handler`:
 
- * It requires `GET` and `POST` requests
-   to be routed to whatever URI to which it is mapped; other request
-   methods result in an HTTP error response.
- * It requires these standard Ring middlewares to function properly:
-   * `keyword-params`
-   * `nested-params`
-   * `wrap-params`
+* It requires `GET` and `POST` requests
+to be routed to whatever URI to which it is mapped; other request
+methods result in an HTTP error response.
+* It requires these standard Ring middlewares to function properly:
+ ** `keyword-params`
+ ** `nested-params`
+ ** `wrap-params`
 
 Especially if you are going to be connecting to your webapp's nREPL
 endpoint with a client that uses Drawbridge's own HTTP/HTTPS client
@@ -93,7 +98,7 @@ perhaps because you'd like to implement support for Drawbridge in
 non-Clojure nREPL clients, you'll want to review the documentation for
 `ring-handler`, which contains additional important details.
 
-### In Clojure tooling
+=== In Clojure tooling
 
 Drawbridge also provides a client-side nREPL transport implementation
 for the Ring handler in `drawbridge.client/ring-client-transport`.
@@ -104,7 +109,7 @@ implementations to the `nrepl.core/url-connect` multimethod for
 tool that uses `url-connect` will use `ring-client-transport` for
 connecting to HTTP and HTTPS nREPL endpoints.
 
-## TODO
+== TODO
 
 The biggest outstanding issues are around the semantics of how HTTP
 session (might optionally) map onto nREPL sessions.  Right now, they
@@ -115,14 +120,14 @@ emitted by asynchronous or long-running operations.
 Secondarily, supporting nontextual REPL interactions over HTTP has not
 yet been addressed at all.
 
-## Need Help?
+== Need Help?
 
-Send a message to the [clojure-tools](http://groups.google.com/group/clojure-tools)
+Send a message to the http://groups.google.com/group/clojure-tools[clojure-tools]
 mailing list, or ping `cemerick` on freenode irc or
-[twitter](http://twitter.com/cemerick) if you have questions
+http://twitter.com/cemerick[twitter] if you have questions
 or would like to contribute patches.
 
-## License
+== License
 
 Copyright © 2012-2018 Chas Emerick, Bozhidar Batsov and other contributors.
 
