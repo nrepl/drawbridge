@@ -10,11 +10,8 @@
   "HTTP transport support for Clojure's nREPL implemented as a Ring handler."
   {:author "Chas Emerick"}
   (:require [cheshire.core :as json]
-            [clj-http.client :as http]
             [ring.middleware.session.memory :as mem]
-            [ring.util.response :as response]
-            clojure.walk
-            [clojure.java.io :as io])
+            clojure.walk)
   (:use (ring.middleware params keyword-params nested-params session))
   (:import (java.util.concurrent LinkedBlockingQueue TimeUnit)))
 
