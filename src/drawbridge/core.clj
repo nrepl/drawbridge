@@ -9,11 +9,16 @@
 (ns drawbridge.core
   "HTTP transport support for Clojure's nREPL implemented as a Ring handler."
   {:author "Chas Emerick"}
-  (:require [cheshire.core :as json]
-            [ring.middleware.session.memory :as mem]
-            clojure.walk)
-  (:use (ring.middleware params keyword-params nested-params session))
-  (:import (java.util.concurrent LinkedBlockingQueue TimeUnit)))
+  (:require
+   [cheshire.core :as json]
+   clojure.walk
+   [ring.middleware.keyword-params :refer [wrap-keyword-params]]
+   [ring.middleware.nested-params :refer [wrap-nested-params]]
+   [ring.middleware.session :refer [wrap-session]]
+   [ring.middleware.params :refer [wrap-params]]
+   [ring.middleware.session.memory :as mem])
+  (:import
+   (java.util.concurrent LinkedBlockingQueue TimeUnit)))
 
 ;; Compatibility with the legacy tools.nrepl and the new nREPL 0.4.x.
 ;; The assumption is that if someone is using old lein repl or boot repl

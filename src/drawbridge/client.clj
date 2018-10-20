@@ -1,9 +1,11 @@
 (ns drawbridge.client
-  (:require [cheshire.core :as json]
-            [clojure.java.io :as io]
-            [nrepl.core :as nrepl]
-            [clj-http.client :as http])
-  (:import (java.util.concurrent LinkedBlockingQueue TimeUnit)))
+  (:require
+   [cheshire.core :as json]
+   [clojure.java.io :as io]
+   [clj-http.client :as http]
+   [nrepl.core :as nrepl])
+  (:import
+   (java.util.concurrent LinkedBlockingQueue TimeUnit)))
 
 ;; Compatibility with the legacy tools.nrepl and the new nREPL 0.4.x.
 ;; The assumption is that if someone is using old lein repl or boot repl
