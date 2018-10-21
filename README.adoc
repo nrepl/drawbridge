@@ -1,3 +1,6 @@
+= Drawbridge (HTTP Transport for nREPL)
+Bozhidar Batsov <https://github.com/bbatsov>
+
 // Settings:
 :idprefix:
 :idseparator: -
@@ -14,8 +17,6 @@ ifdef::env-github[]
 endif::[]
 
 image::https://img.shields.io/clojars/v/nrepl/drawbridge.svg[Clojars Project,link=https://clojars.org/nrepl/drawbridge]
-
-= Drawbridge
 
 HTTP transport support for Clojure's
 http://github.com/nrepl/nrepl[nREPL] implemented as a
