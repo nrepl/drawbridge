@@ -1,4 +1,17 @@
-:doctype: book
+// Settings:
+:idprefix:
+:idseparator: -
+ifndef::env-github[:icons: font]
+ifdef::env-github,env-browser[]
+:toc: preamble
+:toclevels: 1
+endif::[]
+ifdef::env-github[]
+:status:
+:!toc-title:
+:note-caption: :paperclip:
+:tip-caption: :bulb:
+endif::[]
 
 image::https://img.shields.io/clojars/v/nrepl/drawbridge.svg[Clojars Project,link=https://clojars.org/nrepl/drawbridge]
 
