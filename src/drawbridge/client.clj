@@ -45,7 +45,7 @@
                                                              (when msg {:form-params msg})))]
                  (swap! session-cookies merge cookies)
                  (fill body)))]
-    (transport/fn-transport
+    (transport/FnTransport.
      (fn read [timeout]
        (let [t (System/currentTimeMillis)]
          (or (.poll incoming 0 TimeUnit/MILLISECONDS)
