@@ -2,8 +2,7 @@
   (:require
    [cheshire.core :as json]
    [clojure.java.io :as io]
-   [clj-http.client :as http]
-   [nrepl.core :as nrepl])
+   [clj-http.client :as http])
   (:import
    (java.util.concurrent LinkedBlockingQueue TimeUnit)))
 
