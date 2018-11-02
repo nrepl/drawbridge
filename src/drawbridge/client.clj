@@ -10,16 +10,12 @@
 ;; The assumption is that if someone is using old lein repl or boot repl
 ;; they'll end up using the tools.nrepl, otherwise the modern one.
 (if (find-ns 'clojure.tools.nrepl)
-  (do (require
-       '[clojure.tools.nrepl :as nrepl]
-       '[clojure.tools.nrepl.transport :as transport])
-      (import
-       '[clojure.tools.nrepl.transport FnTransport]))
-  (do (require
-       '[nrepl.core :as nrepl]
-       '[nrepl.transport :as transport])
-      (import
-       '[nrepl.transport FnTransport])))
+  (require
+   '[clojure.tools.nrepl :as nrepl]
+   '[clojure.tools.nrepl.transport :as transport])
+  (require
+   '[nrepl.core :as nrepl]
+   '[nrepl.transport :as transport]))
 
 (defn ring-client-transport
   "Returns an nREPL client-side transport to connect to HTTP nREPL
@@ -49,7 +45,7 @@
                                                              (when msg {:form-params msg})))]
                  (swap! session-cookies merge cookies)
                  (fill body)))]
-    (transport/FnTransport.
+    (transport/->FnTransport
      (fn read [timeout]
        (let [t (System/currentTimeMillis)]
          (or (.poll incoming 0 TimeUnit/MILLISECONDS)
