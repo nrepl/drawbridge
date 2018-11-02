@@ -22,8 +22,8 @@
    endpoints implemented by `ring-handler`.
 
    This fn is implicitly registered as the implementation of
-   nrepl.core/url-connect for `http` and `https` schemes;
-   so, once this namespace is loaded, any tool that uses url-connect
+   `nrepl.core/url-connect` for `http` and `https` schemes;
+   so, once this namespace is loaded, any tool that uses `url-connect`
    will use this implementation for connecting to HTTP and HTTPS
    nREPL endpoints."
   [url]
