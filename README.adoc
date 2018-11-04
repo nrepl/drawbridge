@@ -18,6 +18,7 @@ endif::[]
 
 image:https://img.shields.io/clojars/v/nrepl/drawbridge.svg[Clojars Project,link=https://clojars.org/nrepl/drawbridge]
 image:https://cljdoc.xyz/badge/nrepl/drawbridge[cljdoc badge,link=https://cljdoc.xyz/d/nrepl/drawbridge/CURRENT]
+image:https://travis-ci.org/nrepl/drawbridge.png?branch=master[Build Status (Travis CI),link=https://travis-ci.org/nrepl/drawbridge}]
 
 HTTP transport support for Clojure's
 http://github.com/nrepl/nrepl[nREPL] implemented as a
