@@ -11,13 +11,16 @@
                  ;; client
                  [clj-http "3.9.1"]]
 
+  :aliases {"test-all" ["with-profile" "+1.8:+1.9" "test"]}
+
   :deploy-repositories [["clojars" {:url "https://clojars.org/repo"
                                     :username :env/clojars_username
                                     :password :env/clojars_password
                                     :sign-releases false}]]
 
-  :dev-dependencies [[ring "1.7.1"]]
-  :profiles {:dev {:dependencies [[ring "1.7.1"]]}
+  :profiles {:dev {:dependencies [[compojure "1.6.1"]
+                                  [http-kit "2.2.0"]
+                                  [ring "1.7.1"]]}
              :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}
              :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}
 
