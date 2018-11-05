@@ -25,4 +25,4 @@
              :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}
              :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}
 
-             :cljfmt {:plugins [[lein-cljfmt "0.5.7"]]}})
+             :cljfmt {:plugins [[lein-cljfmt "0.6.1"]]}})
