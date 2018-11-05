@@ -3,6 +3,7 @@
   :url "http://github.com/nrepl/drawbridge"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
+  :scm {:name "git" :url "https://github.com/nrepl/drawbridge"}
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [nrepl "0.4.5"]
                  [ring/ring-core "1.7.1"]
