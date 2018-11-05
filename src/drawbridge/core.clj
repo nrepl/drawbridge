@@ -115,7 +115,6 @@
            cookie-name "drawbridge-session"}}]
   ;; TODO heartbeat for continuous feeding mode
   (-> (fn [{:keys [params session headers request-method] :as request}]
-                                        ;(println params session)
         (let [msg (clojure.walk/keywordize-keys params)]
           (cond
             (not (#{:post :get} request-method)) illegal-method-error
