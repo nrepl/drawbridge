@@ -5,7 +5,7 @@
             [drawbridge.core :as drawbridge]
             [drawbridge.client]
             [nrepl.core :as nrepl]
-            [org.httpkit.server :as server]))
+            [aleph.http :as http]))
 
 (let [nrepl-handler (drawbridge/ring-handler)]
   (defroutes app
@@ -13,9 +13,9 @@
 
 (defn server-fixture
   [f]
-  (let [stop-fn (server/run-server (handler/api #'app) {:port 12345})]
+  (let [server (http/start-server (handler/api #'app) {:port 12345})]
     (f)
-    (stop-fn)))
+    (.close server)))
 
 (use-fixtures :once server-fixture)
 
