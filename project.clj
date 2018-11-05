@@ -19,7 +19,7 @@
                                     :sign-releases false}]]
 
   :profiles {:dev {:dependencies [[compojure "1.6.1"]
-                                  [http-kit "2.2.0"]
+                                  [aleph "0.4.6"]
                                   [ring "1.7.1"]]}
              :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}
              :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}
