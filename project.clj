@@ -20,7 +20,7 @@
                                     :sign-releases false}]]
 
   :profiles {:dev {:dependencies [[compojure "1.6.1"]
-                                  [aleph "0.4.4"]
+                                  [ring/ring-jetty-adapter "1.7.1"]
                                   [ring "1.7.1"]]}
              :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}
              :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}

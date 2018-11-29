@@ -5,7 +5,7 @@
             [drawbridge.core :as drawbridge]
             [drawbridge.client]
             [nrepl.core :as nrepl]
-            [aleph.http :as http]))
+            [ring.adapter.jetty :as jetty]))
 
 (let [nrepl-handler (drawbridge/ring-handler)]
   (defroutes app
@@ -13,9 +13,9 @@
 
 (defn server-fixture
   [f]
-  (let [server (http/start-server (handler/api #'app) {:port 12345})]
+  (let [server (jetty/run-jetty (handler/api #'app) {:port 12345 :join? false})]
     (f)
-    (.close server)))
+    (.stop server)))
 
 (use-fixtures :once server-fixture)
 
