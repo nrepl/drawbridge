@@ -12,7 +12,7 @@
                  ;; client
                  [clj-http "3.9.1"]]
 
-  :aliases {"test-all" ["with-profile" "+1.8:+1.9" "test"]}
+  :aliases {"test-all" ["with-profile" "+1.7:+1.8:+1.9" "test"]}
 
   :deploy-repositories [["clojars" {:url "https://clojars.org/repo"
                                     :username :env/clojars_username
@@ -20,8 +20,9 @@
                                     :sign-releases false}]]
 
   :profiles {:dev {:dependencies [[compojure "1.6.1"]
-                                  [aleph "0.4.6"]
+                                  [aleph "0.4.4"]
                                   [ring "1.7.1"]]}
+             :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}
              :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}
              :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}
 
