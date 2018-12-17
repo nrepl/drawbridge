@@ -39,10 +39,11 @@
                (send-message client {:op "eval" :code "(+ 1 2)"}))))
 
       (testing "Evaluating an invalid form returns an error"
-        (is (= {:status  ["eval-error"]
-                :ex      "class clojure.lang.LispReader$ReaderException"
-                :root-ex "class java.lang.RuntimeException"}
-               (send-message client {:op "eval" :code "(+ 1 2"}))))
+        (let [res (send-message client {:op "eval" :code "(+ 1 2"})]
+          (is (= (:status res) ["eval-error"]))
+          (is (= (:root-ex res) "class java.lang.RuntimeException"))
+          (is (some #{(:ex res)} #{"class clojure.lang.LispReader$ReaderException"
+                                   "class clojure.lang.ExceptionInfo"}))))
 
       (testing "Evaluating a form that throws returns an error"
         (is (= {:status  ["eval-error"]
