@@ -1,0 +1,10 @@
+= Changelog
+
+== master (unreleased)
+
+== 0.2.0 (2019-01-02)
+
+=== Changes
+
+* *(Breaking)* Drop support for nREPL 0.2.
+* Remove explicit nREPL dependency.
