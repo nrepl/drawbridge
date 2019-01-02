@@ -12,6 +12,9 @@
   (:require
    [cheshire.core :as json]
    clojure.walk
+   [nrepl.core :as nrepl]
+   [nrepl.server :as server]
+   [nrepl.transport :as transport]
    [ring.middleware.keyword-params :refer [wrap-keyword-params]]
    [ring.middleware.nested-params :refer [wrap-nested-params]]
    [ring.middleware.session :refer [wrap-session]]
@@ -19,19 +22,6 @@
    [ring.middleware.session.memory :as mem])
   (:import
    (java.util.concurrent LinkedBlockingQueue TimeUnit)))
-
-;; Compatibility with the legacy tools.nrepl and the new nREPL 0.4.x.
-;; The assumption is that if someone is using old lein repl or boot repl
-;; they'll end up using the tools.nrepl, otherwise the modern one.
-(if (find-ns 'clojure.tools.nrepl)
-  (require
-   '[clojure.tools.nrepl :as nrepl]
-   '[clojure.tools.nrepl.server :as server]
-   '[clojure.tools.nrepl.transport :as transport])
-  (require
-   '[nrepl.core :as nrepl]
-   '[nrepl.server :as server]
-   '[nrepl.transport :as transport]))
 
 (def ^{:private true} message-post-error
   {:status 405

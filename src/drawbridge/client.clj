@@ -2,20 +2,11 @@
   (:require
    [cheshire.core :as json]
    [clojure.java.io :as io]
-   [clj-http.client :as http])
+   [clj-http.client :as http]
+   [nrepl.core :as nrepl]
+   [nrepl.transport :as transport])
   (:import
    (java.util.concurrent LinkedBlockingQueue TimeUnit)))
-
-;; Compatibility with the legacy tools.nrepl and the new nREPL 0.4.x.
-;; The assumption is that if someone is using old lein repl or boot repl
-;; they'll end up using the tools.nrepl, otherwise the modern one.
-(if (find-ns 'clojure.tools.nrepl)
-  (require
-   '[clojure.tools.nrepl :as nrepl]
-   '[clojure.tools.nrepl.transport :as transport])
-  (require
-   '[nrepl.core :as nrepl]
-   '[nrepl.transport :as transport]))
 
 (defn ring-client-transport
   "Returns an nREPL client-side transport to connect to HTTP nREPL
