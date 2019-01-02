@@ -4,7 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :scm {:name "git" :url "https://github.com/nrepl/drawbridge"}
-  :dependencies [[nrepl "0.4.5"]
+  :dependencies [[nrepl "0.5.3"]
                  [ring/ring-core "1.7.1"]
                  [cheshire "5.8.1"]
                  ;; client
