@@ -39,10 +39,14 @@
                (send-message client {:op "eval" :code "(+ 1 2)"}))))
 
       (testing "Evaluating an invalid form returns an error"
-        (is (= {:err "Syntax error reading source at (REPL:1:1).\nEOF while reading, starting at line 1\n"}
+        (is (= (if (< (:minor *clojure-version*) 10)
+                   {:err "RuntimeException EOF while reading, starting at line 1  clojure.lang.Util.runtimeException (Util.java:221)\n"}
+                   {:err "Syntax error reading source at (REPL:1:1).\nEOF while reading, starting at line 1\n"})
                (send-message client {:op "eval" :code "(+ 1 2"}))))
 
       (testing "Evaluating a form that throws returns an error"
-        (is (clojure.string/starts-with?
+        (is (.startsWith
               (:err (send-message client {:op "eval" :code "(throw (ex-info nil {:foo :bar}))"}))
-              "Execution error (ExceptionInfo) at user/eval"))))))
+              (if (< (:minor *clojure-version*) 10)
+                  "ExceptionInfo   clojure.core/ex-info (core.clj"
+                  "Execution error (ExceptionInfo) at user/eval")))))))
