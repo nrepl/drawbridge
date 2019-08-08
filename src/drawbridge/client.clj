@@ -3,10 +3,13 @@
    [cheshire.core :as json]
    [clojure.java.io :as io]
    [clj-http.client :as http]
+   [nrepl.config]
    [nrepl.core :as nrepl]
    [nrepl.transport :as transport])
   (:import
    (java.util.concurrent LinkedBlockingQueue TimeUnit)))
+
+(def ^:private http-headers (get-in nrepl.config/config [:drawbridge :http-headers]))
 
 (defn ring-client-transport
   "Returns an nREPL client-side transport to connect to HTTP nREPL
@@ -33,7 +36,8 @@
                                                       url
                                                       (merge {:as :stream
                                                               :cookies @session-cookies}
-                                                             (when msg {:form-params msg})))]
+                                                             (when msg {:form-params msg})
+                                                             (when http-headers {:headers http-headers})))]
                  (swap! session-cookies merge cookies)
                  (fill body)))]
     (transport/->FnTransport
