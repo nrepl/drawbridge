@@ -2,6 +2,10 @@
 
 == master (unreleased)
 
+== 0.2.1 (2019-08-15)
+
+* https://github.com/nrepl/drawbridge/pull/38[#38]: Support additional HTTP headers from nREPL config.
+
 == 0.2.0 (2019-01-02)
 
 === Changes
