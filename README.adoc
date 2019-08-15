@@ -125,6 +125,18 @@ implementations to the `nrepl.core/url-connect` multimethod for
 tool that uses `url-connect` will use `ring-client-transport` for
 connecting to HTTP and HTTPS nREPL endpoints.
 
+==== Configuration
+
+The client supports additional HTTP headers, which is useful e.g. for
+using Bearer authorization to connect to the endpoint. The headers can
+be set in the nREPL configuration. For example, create `.nrepl.edn` in
+the working directory with the contents:
+
+[source,clojure]
+----
+{:drawbridge {:http-headers {:Authorization "Bearer <JWT token>"}}}
+----
+
 == TODO
 
 The biggest outstanding issues are around the semantics of how HTTP
