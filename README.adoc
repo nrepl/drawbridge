@@ -125,7 +125,7 @@ implementations to the `nrepl.core/url-connect` multimethod for
 tool that uses `url-connect` will use `ring-client-transport` for
 connecting to HTTP and HTTPS nREPL endpoints.
 
-==== Configuration
+=== Configuration
 
 The client supports additional HTTP headers, which is useful e.g. for
 using Bearer authorization to connect to the endpoint. The headers can
@@ -150,10 +150,8 @@ yet been addressed at all.
 
 == Need Help?
 
-Send a message to the http://groups.google.com/group/clojure-tools[clojure-tools]
-mailing list, or ping `cemerick` on freenode irc or
-http://twitter.com/cemerick[twitter] if you have questions
-or would like to contribute patches.
+The primary support channel for Drawbridge is the http://clojurians.net/[Clojurians Slack]. Feel
+free to ask any questions on the `#nrepl` channel there.
 
 == License
 
