@@ -137,8 +137,15 @@ the working directory with the contents:
 {:drawbridge {:http-headers {:Authorization "Bearer <JWT token>"}}}
 ----
 
-Also, for using connecting repl via endpoint make sure that you added
-following line to the `~/.lein/profiles.clj`
+=== Setup
+For using a remote REPL you should add a drawbridge plugin to the `project.clj`
+for local usage
+[source,clojure]
+---
+{:plugins [[nrepl/drawbridge "0.2.1"]]}
+---
+
+or to the `~/.lein/profiles.clj` for system-wide setup.
 [source,clojure]
 ---
 {:user {:plugins [[nrepl/drawbridge "0.2.1"]]}}
