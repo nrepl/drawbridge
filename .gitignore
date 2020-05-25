@@ -15,7 +15,4 @@ pom.xml
 .project
 .settings
 
-.idea/
-drawbridge.iml
-
 .externalToolBuilders
