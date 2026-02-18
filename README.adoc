@@ -17,7 +17,7 @@ ifdef::env-github[]
 endif::[]
 
 image:https://img.shields.io/clojars/v/nrepl/drawbridge.svg[Clojars Project,link=https://clojars.org/nrepl/drawbridge]
-image:https://cljdoc.xyz/badge/nrepl/drawbridge[cljdoc badge,link=https://cljdoc.org/d/nrepl/drawbridge/CURRENT]
+image:https://cljdoc.org/badge/nrepl/drawbridge[cljdoc badge,link=https://cljdoc.org/d/nrepl/drawbridge/CURRENT]
 image:https://github.com/nrepl/drawbridge/actions/workflows/ci.yml/badge.svg[Build Status,link=https://github.com/nrepl/drawbridge/actions/workflows/ci.yml]
 
 HTTP transport support for Clojure's
