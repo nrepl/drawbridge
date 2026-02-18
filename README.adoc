@@ -37,6 +37,13 @@ Drawbridge is available in Clojars. Add this `:dependency` to your Leiningen
 [nrepl/drawbridge "0.2.1"]
 ----
 
+Or, add this to your `deps.edn`:
+
+[source,clojure]
+----
+nrepl/drawbridge {:mvn/version "0.2.1"}
+----
+
 Or, add this to your Maven project's `pom.xml`:
 
 [source,xml]
