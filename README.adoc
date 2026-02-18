@@ -137,17 +137,6 @@ the working directory with the contents:
 {:drawbridge {:http-headers {:Authorization "Bearer <JWT token>"}}}
 ----
 
-== TODO
-
-The biggest outstanding issues are around the semantics of how HTTP
-session (might optionally) map onto nREPL sessions.  Right now, they
-don't at all, though HTTP sessions _are_ significant insofar as they
-retain the message queue nREPL will dispatch responses to that are
-emitted by asynchronous or long-running operations.
-
-Secondarily, supporting nontextual REPL interactions over HTTP has not
-yet been addressed at all.
-
 == Need Help?
 
 The primary support channel for Drawbridge is the http://clojurians.net/[Clojurians Slack]. Feel
