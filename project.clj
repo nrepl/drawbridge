@@ -4,26 +4,25 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :scm {:name "git" :url "https://github.com/nrepl/drawbridge"}
-  :dependencies [[nrepl "0.6.0"]
-                 [ring/ring-core "1.7.1"]
-                 [cheshire "5.8.1"]
+  :dependencies [[nrepl "1.5.2"]
+                 [ring/ring-core "1.15.3"]
+                 [cheshire "6.1.0"]
                  ;; client
-                 [clj-http "3.9.1"]]
+                 [clj-http "3.13.1"]]
 
-  :aliases {"test-all" ["with-profile" "+1.7:+1.8:+1.9:+1.10" "test"]}
+  :aliases {"test-all" ["with-profile" "+1.10:+1.11:+1.12" "test"]}
 
   :deploy-repositories [["clojars" {:url "https://clojars.org/repo"
                                     :username :env/clojars_username
                                     :password :env/clojars_password
                                     :sign-releases false}]]
 
-  :profiles {:dev {:dependencies [[compojure "1.6.1"]
-                                  [ring/ring-jetty-adapter "1.7.1"]
-                                  [ring "1.7.1"]]}
+  :profiles {:dev {:dependencies [[compojure "1.7.2"]
+                                  [ring/ring-jetty-adapter "1.15.3"]
+                                  [ring "1.15.3"]]}
              :provided {:dependencies [[org.clojure/clojure "1.10.0"]]}
-             :1.7 {:dependencies [[org.clojure/clojure "1.7.0"]]}
-             :1.8 {:dependencies [[org.clojure/clojure "1.8.0"]]}
-             :1.9 {:dependencies [[org.clojure/clojure "1.9.0"]]}
              :1.10 {:dependencies [[org.clojure/clojure "1.10.0"]]}
+             :1.11 {:dependencies [[org.clojure/clojure "1.11.4"]]}
+             :1.12 {:dependencies [[org.clojure/clojure "1.12.0"]]}
 
-             :cljfmt {:plugins [[lein-cljfmt "0.6.1"]]}})
+             :cljfmt {:plugins [[lein-cljfmt "0.9.2"]]}})
