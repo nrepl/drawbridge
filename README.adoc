@@ -53,7 +53,7 @@ Or, add this to your Maven project's `pom.xml`:
 </dependency>
 ----
 
-NOTE: Drawbridge is compatible with Clojure 1.7.0+ and nREPL 0.4+.
+NOTE: Drawbridge is compatible with Clojure 1.10+ and nREPL 1.0+.
 
 === Upgrade notes
 

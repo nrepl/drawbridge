@@ -22,14 +22,15 @@
    nREPL endpoints."
   [url]
   (let [incoming (LinkedBlockingQueue.)
-        fill #(when-let [responses (->> (io/reader %)
-                                        line-seq
-                                        rest
-                                        drop-last
-                                        (map json/parse-string)
-                                        (remove nil?)
-                                        seq)]
-                (.addAll incoming responses))
+        fill (fn [body]
+               (when-let [responses (->> (io/reader body)
+                                         line-seq
+                                         rest
+                                         drop-last
+                                         (map #(json/parse-string % true))
+                                         (remove nil?)
+                                         seq)]
+                 (.addAll incoming responses)))
         session-cookies (atom nil)
         http (fn [& [msg]]
                (let [{:keys [cookies body] :as resp} ((if msg http/post http/get)
