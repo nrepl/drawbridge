@@ -102,6 +102,12 @@ authentication or authorization to some application-specific role, those
 prerequisites will apply just as with any other Ring handler in the same
 context.
 
+`ring-handler` accepts the following options:
+
+* `:nrepl-handler` -- a custom nREPL handler (default: `nrepl.server/default-handler`)
+* `:default-read-timeout` -- milliseconds to wait for additional nREPL responses before finalizing each HTTP response (default: `0`)
+* `:cookie-name` -- the session cookie name (default: `"drawbridge-session"`)
+
 Some things to be aware of when using `drawbridge.core/ring-handler`:
 
 * It requires `GET` and `POST` requests
