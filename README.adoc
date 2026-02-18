@@ -155,6 +155,6 @@ free to ask any questions on the `#nrepl` channel there.
 
 == License
 
-Copyright © 2012-2019 Chas Emerick, Bozhidar Batsov and other contributors.
+Copyright © 2012-2026 Chas Emerick, Bozhidar Batsov and other contributors.
 
 Distributed under the Eclipse Public License, the same as Clojure.
