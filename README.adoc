@@ -127,6 +127,14 @@ perhaps because you'd like to implement support for Drawbridge in
 non-Clojure nREPL clients, you'll want to review the documentation for
 `ring-handler`, which contains additional important details.
 
+=== Security
+
+WARNING: Drawbridge exposes a full nREPL session over HTTP. Anyone who can reach the
+endpoint can execute arbitrary code in your application. Always protect the
+endpoint with authentication and authorization middleware before deploying to
+production. Use HTTPS to prevent credentials and REPL traffic from being
+transmitted in cleartext.
+
 === In Clojure tooling
 
 Drawbridge also provides a client-side nREPL transport implementation
