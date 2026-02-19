@@ -47,7 +47,10 @@
          (or (.poll incoming 0 TimeUnit/MILLISECONDS)
              (when (pos? timeout)
                (http)
-               (recur (- timeout (- (System/currentTimeMillis) t)))))))
+               (or (.poll incoming (min timeout 100) TimeUnit/MILLISECONDS)
+                   (let [remaining (- timeout (- (System/currentTimeMillis) t))]
+                     (when (pos? remaining)
+                       (recur remaining))))))))
      http
      (fn close []))))
 
