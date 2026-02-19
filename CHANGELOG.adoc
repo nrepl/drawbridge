@@ -1,12 +1,13 @@
 = Changelog
 
-== master (unreleased)
+== 0.3.0 (2026-02-19)
 
 * Update all dependencies to current versions.
 * *(Breaking)* Drop support for Clojure 1.7-1.9. Minimum is now Clojure 1.10.
 * *(Breaking)* Require nREPL 1.0+.
 * *(Breaking)* Require Java 17+ (Ring 1.15 uses Jetty 12).
 * Fix client transport to keywordize JSON response keys for compatibility with nREPL 1.x.
+* Expand test suite with comprehensive Ring handler and HTTP client transport tests.
 
 == 0.2.1 (2019-08-15)
 
