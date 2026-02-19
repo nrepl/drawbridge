@@ -1,11 +1,13 @@
 (ns drawbridge.client-test
   (:require [clojure.test :refer [deftest is use-fixtures testing]]
             [compojure.core :refer [ANY defroutes]]
-            [compojure.handler :as handler]
             [drawbridge.core :as drawbridge]
             [drawbridge.client]
             [nrepl.core :as nrepl]
-            [ring.adapter.jetty :as jetty]))
+            [ring.adapter.jetty :as jetty]
+            [ring.middleware.keyword-params :refer [wrap-keyword-params]]
+            [ring.middleware.nested-params :refer [wrap-nested-params]]
+            [ring.middleware.params :refer [wrap-params]]))
 
 (let [nrepl-handler (drawbridge/ring-handler)]
   (defroutes app
@@ -15,7 +17,8 @@
 
 (defn server-fixture
   [f]
-  (let [server (jetty/run-jetty (handler/api #'app) {:port 0 :join? false})
+  (let [server (jetty/run-jetty (-> #'app wrap-keyword-params wrap-nested-params wrap-params)
+                               {:port 0 :join? false})
         port (.getLocalPort (first (.getConnectors server)))]
     (try
       (binding [*port* port]
