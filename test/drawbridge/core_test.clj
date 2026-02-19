@@ -73,12 +73,42 @@
       (is (= 200 (:status resp)))
       (is (= [] (parse-body (:body resp))))))
 
-  (testing "POST eval returns result"
+  (testing "POST eval returns result with correct content type and done status"
     (let [handler (make-handler :default-read-timeout 5000)
           resp (handler (request :post {:op "eval" :code "(+ 1 2)"}))
           messages (parse-body (:body resp))]
       (is (= 200 (:status resp)))
-      (is (some #(= "3" (:value %)) messages)))))
+      (is (= "application/json" (get-in resp [:headers "Content-Type"])))
+      (is (some #(= "3" (:value %)) messages))
+      (is (some #(contains? (set (:status %)) "done") messages))))
+
+  (testing "REPL-Response-Timeout header controls read timeout"
+    (let [handler (make-handler)
+          resp (handler (request :post
+                                 {:op "eval" :code "(+ 2 3)"}
+                                 {"repl-response-timeout" "5000"}))
+          messages (parse-body (:body resp))]
+      (is (= 200 (:status resp)))
+      (is (some #(= "5" (:value %)) messages))))
+
+  (testing "default-read-timeout 0 returns empty when eval is pending"
+    (let [handler (make-handler)
+          resp (handler (request :post {:op "eval" :code "(+ 1 2)"}))
+          messages (parse-body (:body resp))]
+      (is (= 200 (:status resp)))
+      (is (= [] messages))))
+
+  (testing "GET retrieves deferred eval results via polling"
+    (let [handler (make-handler)
+          resp1 (handler (request :post {:op "eval" :code "(+ 5 6)"}))
+          cookie (extract-session-cookie resp1 "drawbridge-session")]
+      (is (= [] (parse-body (:body resp1))))
+      (Thread/sleep 200)
+      (let [resp2 (handler (-> (request :get)
+                               (assoc-in [:headers "cookie"]
+                                         (str "drawbridge-session=" cookie))))
+            messages (parse-body (:body resp2))]
+        (is (some #(= "11" (:value %)) messages))))))
 
 (deftest session-handling
   (testing "session cookie is set and can be reused"
