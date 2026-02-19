@@ -42,6 +42,12 @@
                  (swap! session-cookies merge cookies)
                  (fill body)))]
     (transport/->FnTransport
+     ;; Read the next response message, polling the server via HTTP.
+     ;; First checks the local queue without blocking. If empty and time
+     ;; remains, fires an HTTP GET (which may fill the queue via `fill`),
+     ;; then waits up to 100ms for a result before retrying. The 100ms
+     ;; cap avoids flooding the server with GETs when no responses are
+     ;; pending (see #10).
      (fn read [timeout]
        (let [t (System/currentTimeMillis)]
          (or (.poll incoming 0 TimeUnit/MILLISECONDS)
