@@ -1,5 +1,11 @@
 = Changelog
 
+== 0.3.1 (2026-07-09)
+
+* Update dependencies: nREPL 1.7.0, Ring 1.15.5, Cheshire 6.2.0.
+* https://github.com/nrepl/drawbridge/issues/10[#10]: Throttle client polling to avoid flooding the server with GET requests.
+* Replace deprecated `compojure.handler/api` with explicit Ring middleware.
+
 == 0.3.0 (2026-02-19)
 
 * Update all dependencies to current versions.
