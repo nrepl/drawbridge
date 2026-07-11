@@ -79,53 +79,94 @@ configuration and can alleviate security concerns, and works around
 limitations in various deployment environments where traditional
 socket-based channels are limited or entirely unavailable.
 
-=== In a Ring web application
+Drawbridge has two sides:
 
-Once you have added Drawbridge to your project's dependencies, just
-add its Ring handler to your application.  For example, if you're using
-https://github.com/weavejester/compojure[Compojure] for routing and
-such:
+* A *server side* (`drawbridge.core/ring-handler`) that exposes an nREPL
+  endpoint as a Ring handler you mount in your web app.
+* A *client side* (`drawbridge.client`) that lets Clojure tooling connect
+  to such an endpoint over HTTP/HTTPS.
+
+The sections below cover each in turn, with complete examples.
+
+== Server: exposing an nREPL endpoint over HTTP
+
+`drawbridge.core/ring-handler` returns an ordinary Ring handler. It needs
+the standard param middleware (`wrap-keyword-params`, `wrap-nested-params`
+and `wrap-params`, a.k.a. the Compojure "api" stack) applied to it, and it
+only responds to `GET` and `POST` requests. Session state is managed
+internally, so you don't need to add session middleware yourself.
+
+=== A standalone endpoint
+
+The smallest possible server: wrap the handler in the required middleware
+and run it with the Jetty adapter.
 
 [source,clojure]
 ----
-(require 'drawbridge.core)
+(ns my-app.repl
+  (:require
+   [drawbridge.core :refer [ring-handler]]
+   [ring.adapter.jetty :refer [run-jetty]]
+   [ring.middleware.keyword-params :refer [wrap-keyword-params]]
+   [ring.middleware.nested-params :refer [wrap-nested-params]]
+   [ring.middleware.params :refer [wrap-params]]))
 
-(let [nrepl-handler (drawbridge.core/ring-handler)]
-  (ANY "/repl" request (nrepl-handler request)))
+(def app
+  (-> (ring-handler)
+      wrap-keyword-params
+      wrap-nested-params
+      wrap-params))
+
+(defn -main [& _]
+  (run-jetty app {:port 8080 :join? false}))
 ----
 
-With this, any HTTP or HTTPS client can send nREPL messages to the
-`/repl` URI, and read responses from the same.  Conveniently, any
-security measures applied within your application will work fine in
-conjunction with Drawbridge; so, if you configure its route to require
-authentication or authorization to some application-specific role, those
-prerequisites will apply just as with any other Ring handler in the same
-context.
+Run it and you have an nREPL endpoint at `http://localhost:8080/`. See
+the client section below for how to connect.
+
+=== Mounting into an existing app
+
+More commonly you'll mount the endpoint at some route within a larger
+application. Wrap the Drawbridge handler in its middleware, then route a
+single URI to it. With
+https://github.com/weavejester/compojure[Compojure]:
+
+[source,clojure]
+----
+(ns my-app.handler
+  (:require
+   [compojure.core :refer [ANY defroutes]]
+   [compojure.route :as route]
+   [drawbridge.core :refer [ring-handler]]
+   [ring.middleware.keyword-params :refer [wrap-keyword-params]]
+   [ring.middleware.nested-params :refer [wrap-nested-params]]
+   [ring.middleware.params :refer [wrap-params]]))
+
+(def drawbridge
+  (-> (ring-handler)
+      wrap-keyword-params
+      wrap-nested-params
+      wrap-params))
+
+(defroutes app
+  (ANY "/repl" request (drawbridge request))
+  (route/not-found "Not found"))
+----
+
+Any HTTP or HTTPS client can now send nREPL messages to `/repl` and read
+responses from the same URI.
+
+=== Handler options
 
 `ring-handler` accepts the following options:
 
-* `:nrepl-handler` -- a custom nREPL handler (default: `nrepl.server/default-handler`)
+* `:nrepl-handler` -- a custom nREPL handler (default: `(nrepl.server/default-handler)`)
 * `:default-read-timeout` -- milliseconds to wait for additional nREPL responses before finalizing each HTTP response (default: `0`)
 * `:cookie-name` -- the session cookie name (default: `"drawbridge-session"`)
 
-Some things to be aware of when using `drawbridge.core/ring-handler`:
-
-* It requires `GET` and `POST` requests
-to be routed to whatever URI to which it is mapped; other request
-methods result in an HTTP error response.
-* It requires these standard Ring middlewares to function properly:
- ** `keyword-params`
- ** `nested-params`
- ** `wrap-params`
-
-Especially if you are going to be connecting to your webapp's nREPL
-endpoint with a client that uses Drawbridge's own HTTP/HTTPS client
-transport (see below), this is all you need to know.
-
-If you are interested in the implementation details and semantics,
-perhaps because you'd like to implement support for Drawbridge in
-non-Clojure nREPL clients, you'll want to review the documentation for
-`ring-handler`, which contains additional important details.
+If you'd like to implement Drawbridge support in a non-Clojure nREPL
+client, the docstring of `ring-handler` documents the request/response
+semantics and message format in detail.
 
 === Security
 
@@ -135,28 +176,87 @@ endpoint with authentication and authorization middleware before deploying to
 production. Use HTTPS to prevent credentials and REPL traffic from being
 transmitted in cleartext.
 
-=== In Clojure tooling
+Because the endpoint is just a Ring handler, any authentication or
+authorization middleware you already use applies. For example, gating it
+behind HTTP Basic auth:
 
-Drawbridge also provides a client-side nREPL transport implementation
-for the Ring handler in `drawbridge.client/ring-client-transport`.
+[source,clojure]
+----
+(require '[ring.middleware.basic-authentication :refer [wrap-basic-authentication]])
 
-Note that the `drawbridge.client` namespace implicitly adds
-implementations to the `nrepl.core/url-connect` multimethod for
-`"http"` and `"https"` schemes. So, once this namespace is loaded, any
-tool that uses `url-connect` will use `ring-client-transport` for
-connecting to HTTP and HTTPS nREPL endpoints.
+(def secured-drawbridge
+  (-> drawbridge
+      (wrap-basic-authentication
+       (fn [user pass] (and (= user "me") (= pass "secret"))))))
+----
 
-=== Configuration
+== Client: connecting to an endpoint
 
-The client supports additional HTTP headers, which is useful e.g. for
-using Bearer authorization to connect to the endpoint. The headers can
-be set in the nREPL configuration. For example, create `.nrepl.edn` in
-the working directory with the contents:
+`drawbridge.client` provides a client-side nREPL transport for the HTTP
+endpoint. Loading the namespace registers implementations of the
+`nrepl.core/url-connect` multimethod for the `http` and `https` schemes,
+so any tool that connects via a URL going through `url-connect` will speak
+the HTTP transport. Note that loading `drawbridge.client` is what performs
+this registration -- until it's loaded, `url-connect` doesn't know about
+HTTP.
+
+=== From Leiningen
+
+The simplest way to connect is Leiningen's REPL, which loads Drawbridge's
+client transport automatically when the connect URL uses the `http`/`https`
+scheme:
+
+[source,shell]
+----
+lein repl :connect http://localhost:8080/
+----
+
+For this to work Drawbridge needs to be on the classpath. Leiningen bundles
+an old version, so to pin the current one add it to `~/.lein/profiles.clj`:
+
+[source,clojure]
+----
+{:user {:dependencies [[nrepl/drawbridge "0.3.1"]]}}
+----
+
+=== From another Clojure process
+
+To connect programmatically, require `drawbridge.client` (to register the
+`url-connect` implementations) and then use `nrepl.core/url-connect`:
+
+[source,clojure]
+----
+(require '[drawbridge.client]   ;; registers http/https on url-connect
+         '[nrepl.core :as nrepl])
+
+(with-open [conn (nrepl/url-connect "http://localhost:8080/")]
+  (-> (nrepl/client conn 1000)
+      (nrepl/message {:op "eval" :code "(+ 1 2)"})
+      nrepl/response-values))
+;; => [3]
+----
+
+=== Authentication headers
+
+The client can send extra HTTP headers, which is handy for Bearer or Basic
+authorization against a secured endpoint. Set them in the nREPL
+configuration by creating `.nrepl.edn` in the working directory:
 
 [source,clojure]
 ----
 {:drawbridge {:http-headers {:Authorization "Bearer <JWT token>"}}}
 ----
+
+These headers are attached to every request the client makes.
+
+=== A note on editor clients
+
+Editor tooling such as CIDER, Calva, and Conjure connects using a host and
+port rather than a URL, so it does not go through `url-connect` and cannot
+talk to a Drawbridge endpoint directly. Drawbridge targets URL-based
+connections (`lein repl :connect`) and programmatic clients. To reach an
+endpoint from an editor you'd need an nREPL client that speaks the HTTP
+transport, or a local process that bridges a socket to the HTTP endpoint.
 
 == Need Help?
 
