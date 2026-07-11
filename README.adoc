@@ -273,13 +273,15 @@ configuration by creating `.nrepl.edn` in the working directory:
 
 These headers are attached to every request the client makes.
 
-=== A note on editor clients
+=== A note on socket-based clients
 
-Editor tooling such as CIDER, Calva, and Conjure connects using a host and
-port rather than a URL, so it does not go through `url-connect` and cannot
-talk to a Drawbridge endpoint directly. Drawbridge targets URL-based
-connections (`lein repl :connect`) and programmatic clients. To reach an
-endpoint from an editor you'd need an nREPL client that speaks the HTTP
+Many nREPL clients -- editor tooling such as CIDER, Calva, and Conjure,
+terminal REPLs like rebel-readline, and nREPL's own `--connect` command line
+-- connect using a host and port over a raw socket rather than a URL. These
+never go through `url-connect`, so they cannot talk to a Drawbridge endpoint
+directly. Drawbridge targets URL-based connections (`lein repl :connect`, the
+Clojure CLI example above) and programmatic clients. To reach an endpoint
+from a socket-based client you'd need an nREPL client that speaks the HTTP
 transport, or a local process that bridges a socket to the HTTP endpoint.
 
 == Need Help?
