@@ -219,6 +219,30 @@ an old version, so to pin the current one add it to `~/.lein/profiles.clj`:
 {:user {:dependencies [[nrepl/drawbridge "0.3.1"]]}}
 ----
 
+Under the hood this is nothing Leiningen-specific: its REPL (REPL-y)
+requires `drawbridge.client` for `http`/`https` URLs and then calls
+`nrepl.core/url-connect`, running its REPL loop over the returned
+transport. The next two sections do the same thing by hand.
+
+=== From the Clojure CLI
+
+The Clojure CLI (`clojure`/`clj`) doesn't ship an interactive client for
+talking to a remote nREPL over a URL, but you can drive the endpoint with a
+one-off evaluation that performs the same steps: load `drawbridge.client` to
+register the `http`/`https` schemes, then `url-connect`.
+
+[source,shell]
+----
+clojure -Sdeps '{:deps {nrepl/drawbridge {:mvn/version "0.3.1"}}}' \
+  -M -e "(require '[drawbridge.client] '[nrepl.core :as nrepl])
+         (with-open [conn (nrepl/url-connect \"http://localhost:8080/\")]
+           (prn (-> (nrepl/client conn 2000)
+                    (nrepl/message {:op \"eval\" :code \"(+ 1 2)\"})
+                    nrepl/response-values)))"
+----
+
+This prints `[3]`. Wrap it in a `deps.edn` alias if you reach for it often.
+
 === From another Clojure process
 
 To connect programmatically, require `drawbridge.client` (to register the
