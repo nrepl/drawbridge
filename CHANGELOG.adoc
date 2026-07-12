@@ -13,6 +13,18 @@
   `drawbridge.websocket-client` client side, registered on `url-connect`
   for `ws`/`wss`) with server push instead of HTTP long-polling.
 * Add an options arity to `ring-client-transport` accepting `:http-headers`.
+* The bridge CLI writes a `.nrepl-port` file for editor auto-detection,
+  reads the token from `DRAWBRIDGE_TOKEN`, validates its arguments, and
+  supports `--help`.
+* The bridge reports connection failures to the local client as an
+  in-band `:err` message instead of just dropping the socket.
+* The WebSocket server pings connections every 30s (`:ping-interval-ms`)
+  so proxies don't drop idle REPL sessions.
+* Add a `deps.edn`, making Drawbridge usable as a git dependency.
+* https://github.com/nrepl/drawbridge/issues/11[#11]: Confirmed fixed --
+  the handler keeps its session state in a private store under its own
+  cookie and no longer clobbers the application's ring session (now
+  covered by a regression test).
 
 == 0.3.1 (2026-07-09)
 
