@@ -2,9 +2,11 @@
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [drawbridge.auth :as auth]
             [drawbridge.bridge :as bridge]
+            [drawbridge.client]
             [drawbridge.websocket :as websocket]
             [drawbridge.websocket-client]
             [nrepl.core :as nrepl]
+            [nrepl.transport :as transport]
             [ring.adapter.jetty :as jetty]))
 
 (def ^:dynamic *port* nil)
@@ -106,3 +108,88 @@
           (let [client (nrepl/client conn 5000)]
             (is (= "42" (:value (send-message client {:op "eval" :code "(* 6 7)"}))))))
         (finally (bridge/stop-bridge b))))))
+
+(defn- counting-ws-handler
+  "Wrap a websocket ring-handler so `open-count` tracks currently-open
+  server-side WebSocket connections."
+  [base open-count]
+  (fn [req]
+    (let [resp (base req)]
+      (if-let [listener (:ring.websocket/listener resp)]
+        (assoc resp :ring.websocket/listener
+               (-> listener
+                   (update :on-open (fn [f]
+                                      (fn [socket]
+                                        (swap! open-count inc)
+                                        (f socket))))
+                   (update :on-close (fn [f]
+                                       (fn [socket code reason]
+                                         (swap! open-count dec)
+                                         (f socket code reason))))))
+        resp))))
+
+(defn- await-value
+  "Poll until (pred) is true or `ms` elapse."
+  [pred ms]
+  (let [deadline (+ (System/currentTimeMillis) ms)]
+    (while (and (not (pred)) (< (System/currentTimeMillis) deadline))
+      (Thread/sleep 50))
+    (pred)))
+
+(deftest bridge-closes-remote-connection
+  (testing "local disconnect closes the remote WebSocket (no leak)"
+    (let [open-count (atom 0)
+          handler (counting-ws-handler (websocket/ring-handler) open-count)
+          server (jetty/run-jetty handler {:port 0 :join? false})
+          port (.getLocalPort (first (.getConnectors server)))
+          b (bridge/start-bridge {:url (str "ws://localhost:" port "/")})]
+      (try
+        (with-open [conn (nrepl/connect :port (:port b))]
+          (let [client (nrepl/client conn 5000)]
+            (is (= "3" (:value (send-message client {:op "eval" :code "(+ 1 2)"}))))
+            (is (= 1 @open-count))))
+        ;; with-open closed the local socket; the relay must release
+        ;; the remote WebSocket in response.
+        (is (await-value #(zero? @open-count) 5000)
+            "remote WebSocket should close after local disconnect")
+        (finally
+          (bridge/stop-bridge b)
+          (.stop server))))))
+
+(deftest bridge-detects-remote-death
+  (testing "when the remote ws endpoint dies, the local socket is closed"
+    (let [server (jetty/run-jetty (websocket/ring-handler) {:port 0 :join? false})
+          port (.getLocalPort (first (.getConnectors server)))
+          b (bridge/start-bridge {:url (str "ws://localhost:" port "/")})
+          conn (nrepl/connect :port (:port b))]
+      (try
+        (let [client (nrepl/client conn 5000)]
+          (is (= "3" (:value (send-message client {:op "eval" :code "(+ 1 2)"})))))
+        (.stop server)
+        ;; The relay should notice the dead remote and close our
+        ;; socket; a read on it then throws instead of hanging forever.
+        (is (thrown? Exception
+                     (let [deadline (+ (System/currentTimeMillis) 10000)]
+                       (loop []
+                         (transport/recv conn 100)
+                         (when (< (System/currentTimeMillis) deadline)
+                           (recur)))))
+            "local socket should be closed once the remote dies")
+        (finally
+          (try (.close conn) (catch Exception _))
+          (bridge/stop-bridge b))))))
+
+(deftest ws-client-uses-config-headers
+  (testing "wss/ws transport falls back to the .nrepl.edn header config"
+    (let [handler (auth/wrap-token (websocket/ring-handler) "cfg-secret")
+          server (jetty/run-jetty handler {:port 0 :join? false})
+          port (.getLocalPort (first (.getConnectors server)))]
+      (try
+        (with-redefs [drawbridge.client/default-http-headers
+                      {"Authorization" "Bearer cfg-secret"}]
+          (with-open [conn (drawbridge.websocket-client/websocket-client-transport
+                            (str "ws://localhost:" port "/"))]
+            (let [client (nrepl/client conn 5000)]
+              (is (= "3" (:value (send-message client {:op "eval" :code "(+ 1 2)"})))))))
+        (finally
+          (.stop server))))))

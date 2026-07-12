@@ -108,3 +108,65 @@
 
 (deftest start-requires-url
   (is (thrown? IllegalArgumentException (bridge/start-bridge {}))))
+
+(deftest parse-args-test
+  (let [parse #'bridge/parse-args]
+    (testing "defaults"
+      (is (= {:url "http://x/repl" :port 7888 :bind "127.0.0.1"}
+             (parse ["--url" "http://x/repl"]))))
+
+    (testing "explicit port and bind"
+      (is (= {:url "http://x/repl" :port 9999 :bind "0.0.0.0"}
+             (parse ["--url" "http://x/repl" "--port" "9999" "--bind" "0.0.0.0"]))))
+
+    (testing "token becomes a bearer Authorization header"
+      (is (= {"Authorization" "Bearer s3cret"}
+             (:http-headers (parse ["--url" "http://x/repl" "--token" "s3cret"])))))
+
+    (testing "missing url parses to nil (caller decides to bail)"
+      (is (nil? (:url (parse [])))))))
+
+(deftest bencode-safe-test
+  (let [f #'bridge/bencode-safe]
+    (testing "nil-valued entries are dropped at any depth"
+      (is (= {:a 1} (f {:a 1 :b nil})))
+      (is (= {:m {:k 1}} (f {:m {:k 1 :gone nil}}))))
+
+    (testing "booleans and non-integer numbers become strings"
+      (is (= {:pretty "true"} (f {:pretty true})))
+      (is (= {:x "1.5"} (f {:x 1.5})))
+      (is (= {:v ["false" 2]} (f {:v [false 2]}))))
+
+    (testing "ordinary messages pass through unchanged"
+      (is (= {:value "3" :status ["done"] :id 7}
+             (f {:value "3" :status ["done"] :id 7}))))))
+
+(deftest idle-polling-backs-off
+  (let [get-count (atom 0)
+        nrepl-handler (drawbridge/ring-handler)
+        handler (-> (fn [request]
+                      (when (= :get (:request-method request))
+                        (swap! get-count inc))
+                      (nrepl-handler request))
+                    wrap-keyword-params
+                    wrap-nested-params
+                    wrap-params)
+        server (jetty/run-jetty handler {:port 0 :join? false})
+        port (.getLocalPort (first (.getConnectors server)))
+        b (bridge/start-bridge {:url (str "http://localhost:" port "/repl")
+                                :idle-after-ms 200
+                                :idle-poll-ms 1000})]
+    (try
+      (with-open [conn (nrepl/connect :port (:port b))]
+        (let [client (nrepl/client conn 5000)]
+          (is (= "3" (:value (send-message client {:op "eval" :code "(+ 1 2)"}))))
+          ;; Let the connection go idle past :idle-after-ms, then
+          ;; measure the poll rate over 2s. Eager polling would fire
+          ;; ~20 GETs; backed off it's ~2.
+          (Thread/sleep 500)
+          (reset! get-count 0)
+          (Thread/sleep 2000)
+          (is (< @get-count 8) "idle connection should poll slowly")))
+      (finally
+        (bridge/stop-bridge b)
+        (.stop server)))))

@@ -9,7 +9,10 @@
   (:import
    (java.util.concurrent LinkedBlockingQueue TimeUnit)))
 
-(def ^:private default-http-headers
+(def default-http-headers
+  "Extra HTTP headers configured under [:drawbridge :http-headers] in
+   the nREPL config (e.g. `.nrepl.edn`). All Drawbridge client
+   transports send these when no :http-headers option is given."
   (get-in nrepl.config/config [:drawbridge :http-headers]))
 
 (defn ring-client-transport
@@ -19,9 +22,9 @@
    Accepts an options map with the following keys:
 
    * `:http-headers` -- extra HTTP headers to send with every request,
-     e.g. {\"Authorization\" \"Bearer <token>\"}. Defaults to the
-     `[:drawbridge :http-headers]` entry of the nREPL config
-     (see `.nrepl.edn`).
+     e.g. {\"Authorization\" \"Bearer <token>\"}. When nil or absent,
+     falls back to `default-http-headers` (the nREPL config); pass an
+     empty map to send no extra headers despite the config.
 
    This fn is implicitly registered as the implementation of
    `nrepl.core/url-connect` for `http` and `https` schemes;
@@ -29,8 +32,12 @@
    will use this implementation for connecting to HTTP and HTTPS
    nREPL endpoints."
   ([url] (ring-client-transport url nil))
-  ([url {:keys [http-headers] :or {http-headers default-http-headers}}]
-   (let [incoming (LinkedBlockingQueue.)
+  ([url {:keys [http-headers]}]
+   ;; `or`, not destructuring :or -- callers passing an explicit nil
+   ;; (e.g. the bridge without --token) must still get the config
+   ;; default, and :or only fires when the key is absent.
+   (let [http-headers (or http-headers default-http-headers)
+         incoming (LinkedBlockingQueue.)
          fill (fn [body]
                 (when-let [responses (->> (io/reader body)
                                           line-seq
