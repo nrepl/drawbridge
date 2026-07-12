@@ -179,6 +179,32 @@
           (try (.close conn) (catch Exception _))
           (bridge/stop-bridge b))))))
 
+(deftest websocket-keepalive-pings
+  (testing "the server pings idle connections and the client pongs back"
+    (let [pongs (atom 0)
+          base (websocket/ring-handler :ping-interval-ms 100)
+          handler (fn [req]
+                    (let [resp (base req)]
+                      (if-let [listener (:ring.websocket/listener resp)]
+                        (assoc resp :ring.websocket/listener
+                               (assoc listener
+                                      :on-pong (fn [_socket _data]
+                                                 (swap! pongs inc))))
+                        resp)))
+          server (jetty/run-jetty handler {:port 0 :join? false})
+          port (.getLocalPort (first (.getConnectors server)))]
+      (try
+        (with-open [conn (nrepl/url-connect (str "ws://localhost:" port "/"))]
+          (let [client (nrepl/client conn 20000)]
+            (is (= "3" (:value (send-message client {:op "eval" :code "(+ 1 2)"}))))
+            (is (await-value #(pos? @pongs) 5000)
+                "keepalive pings should be answered while the connection idles")
+            ;; the connection is still usable after idling across
+            ;; several ping intervals
+            (is (= "4" (:value (send-message client {:op "eval" :code "(+ 2 2)"}))))))
+        (finally
+          (.stop server))))))
+
 (deftest ws-client-uses-config-headers
   (testing "wss/ws transport falls back to the .nrepl.edn header config"
     (let [handler (auth/wrap-token (websocket/ring-handler) "cfg-secret")
