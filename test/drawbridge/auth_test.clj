@@ -67,15 +67,14 @@
         (testing "client with the right token can eval"
           (with-open [conn (client/ring-client-transport
                             url {:http-headers {"Authorization" "Bearer s3cret"}})]
-            (let [client (nrepl/client conn 5000)
+            (let [client (nrepl/client conn 20000)
                   responses (nrepl/message client {:op "eval" :code "(+ 1 2)"})]
               (is (some #(= "3" (:value %)) responses)))))
 
-        (testing "client without the token is rejected"
-          (with-open [conn (client/ring-client-transport url)]
-            (let [client (nrepl/client conn 1000)]
-              (is (thrown? Exception
-                           (doall (nrepl/message client {:op "eval" :code "(+ 1 2)"})))))))))))
+        (testing "client without the token is rejected at connect time"
+          ;; The transport establishes its session eagerly, so a 401
+          ;; surfaces when the transport is created.
+          (is (thrown? Exception (client/ring-client-transport url))))))))
 
 (deftest secure-end-to-end-bridge
   (testing "socket client -> bridge --token -> secured endpoint"
@@ -86,7 +85,10 @@
                   :http-headers {"Authorization" "Bearer s3cret"}})]
           (try
             (with-open [conn (nrepl/connect :port (:port b))]
-              (let [client (nrepl/client conn 5000)
+              ;; Generous window: nrepl/message returns as soon as
+              ;; :status done arrives, so this only pays off on slow
+              ;; (cold-JIT CI) runs.
+              (let [client (nrepl/client conn 20000)
                     responses (nrepl/message client {:op "eval" :code "(* 6 7)"})]
                 (is (some #(= "42" (:value %)) responses))))
             (finally (bridge/stop-bridge b))))))))

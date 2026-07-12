@@ -35,7 +35,7 @@
   ;; url-connect dispatches on the ws scheme thanks to the
   ;; registration in drawbridge.websocket-client.
   (with-open [conn (nrepl/url-connect (ws-url))]
-    (let [client (nrepl/client conn 5000)]
+    (let [client (nrepl/client conn 20000)]
       (testing "eval returns value and namespace"
         (is (= {:value "3" :ns "user"}
                (send-message client {:op "eval" :code "(+ 1 2)"}))))
@@ -54,7 +54,7 @@
 (deftest websocket-streaming
   (testing "incremental output is pushed as separate messages"
     (with-open [conn (nrepl/url-connect (ws-url))]
-      (let [client (nrepl/client conn 5000)
+      (let [client (nrepl/client conn 20000)
             messages (nrepl/message
                       client
                       {:op "eval"
@@ -91,7 +91,7 @@
       (testing "upgrade with the right token connects and evals"
         (with-open [conn (drawbridge.websocket-client/websocket-client-transport
                           url {:http-headers {"Authorization" "Bearer s3cret"}})]
-          (let [client (nrepl/client conn 5000)]
+          (let [client (nrepl/client conn 20000)]
             (is (= "3" (:value (send-message client {:op "eval" :code "(+ 1 2)"})))))))
 
       (testing "upgrade without the token is rejected during handshake"
@@ -105,7 +105,7 @@
     (let [b (bridge/start-bridge {:url (ws-url)})]
       (try
         (with-open [conn (nrepl/connect :port (:port b))]
-          (let [client (nrepl/client conn 5000)]
+          (let [client (nrepl/client conn 20000)]
             (is (= "42" (:value (send-message client {:op "eval" :code "(* 6 7)"}))))))
         (finally (bridge/stop-bridge b))))))
 
@@ -145,7 +145,7 @@
           b (bridge/start-bridge {:url (str "ws://localhost:" port "/")})]
       (try
         (with-open [conn (nrepl/connect :port (:port b))]
-          (let [client (nrepl/client conn 5000)]
+          (let [client (nrepl/client conn 20000)]
             (is (= "3" (:value (send-message client {:op "eval" :code "(+ 1 2)"}))))
             (is (= 1 @open-count))))
         ;; with-open closed the local socket; the relay must release
@@ -163,7 +163,7 @@
           b (bridge/start-bridge {:url (str "ws://localhost:" port "/")})
           conn (nrepl/connect :port (:port b))]
       (try
-        (let [client (nrepl/client conn 5000)]
+        (let [client (nrepl/client conn 20000)]
           (is (= "3" (:value (send-message client {:op "eval" :code "(+ 1 2)"})))))
         (.stop server)
         ;; The relay should notice the dead remote and close our
@@ -189,7 +189,7 @@
                       {"Authorization" "Bearer cfg-secret"}]
           (with-open [conn (drawbridge.websocket-client/websocket-client-transport
                             (str "ws://localhost:" port "/"))]
-            (let [client (nrepl/client conn 5000)]
+            (let [client (nrepl/client conn 20000)]
               (is (= "3" (:value (send-message client {:op "eval" :code "(+ 1 2)"})))))))
         (finally
           (.stop server))))))
