@@ -301,21 +301,37 @@ endpoint:
 
 [source,shell]
 ----
+export DRAWBRIDGE_TOKEN=<token>
 clojure -Sdeps '{:deps {nrepl/drawbridge {:mvn/version "0.3.1"}}}' \
-  -M -m drawbridge.bridge --url https://my-app.example.com/repl \
-  --port 7888 --token $DRAWBRIDGE_TOKEN
+  -M -m drawbridge.bridge --url https://my-app.example.com/repl --port 7888
 ----
 
 Now `cider-connect` to `localhost:7888` (or point Calva, rebel-readline,
 or any other nREPL client there) and you're evaluating code on the
-remote app. Each local connection gets its own session on the remote
-end, and `--token` is sent as an `Authorization: Bearer` header --
-pairing with `secure-ring-handler` on the server.
+remote app. The bridge writes a `.nrepl-port` file to the working
+directory (and removes it on exit), so editors that auto-detect running
+nREPL servers will find it without being told the port. Each local
+connection gets its own session on the remote end.
+
+The token is sent as an `Authorization: Bearer` header -- pairing with
+`secure-ring-handler` on the server. It can also be passed as
+`--token <token>`, though the environment variable is preferable since
+command-line arguments are visible in the process list. Run with
+`--help` for all options.
 
 The bridge can also be started programmatically with
 `drawbridge.bridge/start-bridge`. When given a `ws://` or `wss://` URL
 it speaks the WebSocket transport (see below) instead of HTTP
 long-polling, which eliminates polling latency entirely.
+
+Since Drawbridge ships a `deps.edn`, the bridge can even be run
+straight from a git coordinate, with no release involved:
+
+[source,shell]
+----
+clojure -Sdeps '{:deps {io.github.nrepl/drawbridge {:git/sha "..."}}}' \
+  -M -m drawbridge.bridge --url https://my-app.example.com/repl
+----
 
 == WebSocket transport
 
@@ -353,6 +369,11 @@ handler opts out of its own auth with `:insecure true`.)
 
 WebSocket support requires a Ring adapter that implements the Ring 1.11+
 WebSocket API -- ring-jetty-adapter does out of the box.
+
+The server pings each connection every 30 seconds by default, so
+proxies and routers (e.g. Heroku's ~55s router timeout) don't sever
+idle REPL sessions. Tune or disable this with the `:ping-interval-ms`
+option.
 
 On the client, `drawbridge.websocket-client` registers the `ws` and
 `wss` schemes with `url-connect` (using the JDK's built-in WebSocket
