@@ -57,6 +57,13 @@
                                                               (when http-headers {:headers http-headers})))]
                   (swap! session-cookies merge cookies)
                   (fill body)))]
+     ;; Establish the server-side session before returning: every
+     ;; cookie-less request creates a fresh session, so concurrent
+     ;; GET/POST from separate threads (a REPL's reader and writer,
+     ;; the bridge's polling loop) could otherwise end up bound to
+     ;; different sessions and responses would never be delivered.
+     ;; This also surfaces connection/auth errors at connect time.
+     (http)
      (transport/->FnTransport
       ;; Read the next response message, polling the server via HTTP.
       ;; First checks the local queue without blocking. If empty and time

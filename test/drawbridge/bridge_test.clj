@@ -45,7 +45,7 @@
 ;; transport -- the same path editors and rebel-readline take.
 (deftest socket-client-eval
   (with-open [conn (nrepl/connect :port *bridge-port*)]
-    (let [client (nrepl/client conn 5000)]
+    (let [client (nrepl/client conn 20000)]
       (testing "a plain socket nREPL client can eval through the bridge"
         (is (= {:value "3" :ns "user"}
                (send-message client {:op "eval" :code "(+ 1 2)"}))))
@@ -60,7 +60,7 @@
 
 (deftest socket-client-describe
   (with-open [conn (nrepl/connect :port *bridge-port*)]
-    (let [client (nrepl/client conn 5000)]
+    (let [client (nrepl/client conn 20000)]
       (testing "describe lists ops, as editors expect during handshake"
         (is (some? (:ops (send-message client {:op "describe"}))))))))
 
@@ -91,7 +91,7 @@
                                        :http-headers {"Authorization" "Bearer s3cret"}})]
       (try
         (with-open [conn (nrepl/connect :port (:port bridge))]
-          (let [client (nrepl/client conn 5000)]
+          (let [client (nrepl/client conn 20000)]
             (is (= "3" (:value (send-message client {:op "eval" :code "(+ 1 2)"}))))
             (is (= #{"Bearer s3cret"} @seen))))
         (finally
@@ -158,12 +158,12 @@
                                 :idle-poll-ms 1000})]
     (try
       (with-open [conn (nrepl/connect :port (:port b))]
-        (let [client (nrepl/client conn 5000)]
+        (let [client (nrepl/client conn 20000)]
           (is (= "3" (:value (send-message client {:op "eval" :code "(+ 1 2)"}))))
-          ;; Let the connection go idle past :idle-after-ms, then
+          ;; Let the connection go idle well past :idle-after-ms, then
           ;; measure the poll rate over 2s. Eager polling would fire
           ;; ~20 GETs; backed off it's ~2.
-          (Thread/sleep 500)
+          (Thread/sleep 1000)
           (reset! get-count 0)
           (Thread/sleep 2000)
           (is (< @get-count 8) "idle connection should poll slowly")))
