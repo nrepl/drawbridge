@@ -31,18 +31,20 @@
 (defn- websocket-transport
   "An nREPL transport that pushes response messages to the client as
   JSON text frames. The server never reads from a transport (messages
-  arrive via `on-message`), so `recv` always returns nil."
+  arrive via `on-message`), so `recv` always returns nil.
+
+  Must be created once per connection: the lock serializes all
+  writers on the shared socket (nREPL serializes sends per session,
+  not per connection, so two sessions on one connection would
+  otherwise write frames concurrently)."
   [socket]
   (let [lock (Object.)]
-    (reify transport/Transport
-      (send [this msg]
-        ;; ws/send is not guaranteed to be safe under concurrent
-        ;; writers (e.g. an eval's stdout racing its :done message).
-        (locking lock
-          (ws/send socket (json/generate-string msg)))
-        this)
-      (recv [_this] nil)
-      (recv [_this _timeout] nil))))
+    (transport/->FnTransport
+     (constantly nil)
+     (fn [msg]
+       (locking lock
+         (ws/send socket (json/generate-string msg))))
+     (fn []))))
 
 (defn ring-handler
   "Returns a Ring handler implementing a WebSocket transport endpoint
@@ -70,14 +72,18 @@
            fallback (constantly upgrade-required-response)}}]
   (fn [request]
     (if (ws/upgrade-request? request)
-      {::ws/listener
-       {:on-open (fn [_socket])
-        :on-message (fn [socket message]
-                      (let [msg (json/parse-string (str message) true)
-                            transport (websocket-transport socket)]
-                        (future (server/handle* msg nrepl-handler transport))))
-        :on-error (fn [socket _throwable]
-                    (when (ws/open? socket)
-                      (ws/close socket 1011 "nREPL transport error")))
-        :on-close (fn [_socket _code _reason])}}
+      ;; One transport per connection, so its lock serializes every
+      ;; writer targeting this socket across all in-flight messages.
+      (let [transport (volatile! nil)]
+        {::ws/listener
+         {:on-open (fn [socket]
+                     (vreset! transport (websocket-transport socket)))
+          :on-message (fn [_socket message]
+                        (let [msg (json/parse-string (str message) true)
+                              t @transport]
+                          (future (server/handle* msg nrepl-handler t))))
+          :on-error (fn [socket _throwable]
+                      (when (ws/open? socket)
+                        (ws/close socket 1011 "nREPL transport error")))
+          :on-close (fn [_socket _code _reason])}})
       (fallback request))))

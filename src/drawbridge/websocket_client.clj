@@ -10,12 +10,19 @@
   extra dependencies are required."
   (:require
    [cheshire.core :as json]
+   [drawbridge.client :as client]
    [nrepl.core :as nrepl]
    [nrepl.transport :as transport])
   (:import
-   (java.net URI)
+   (java.net SocketException URI)
    (java.net.http HttpClient WebSocket WebSocket$Listener)
    (java.util.concurrent LinkedBlockingQueue TimeUnit)))
+
+(defonce ^:private http-client
+  ;; One shared client: each JDK HttpClient owns selector/executor
+  ;; threads that live until GC, and a single client is documented
+  ;; thread-safe and can back any number of WebSockets.
+  (delay (HttpClient/newHttpClient)))
 
 (defn- queueing-listener
   "A WebSocket listener that reassembles text frames into complete
@@ -49,17 +56,20 @@
    Accepts an options map with the following keys:
 
    * `:http-headers` -- extra headers to send with the upgrade request,
-     e.g. {\"Authorization\" \"Bearer <token>\"}
+     e.g. {\"Authorization\" \"Bearer <token>\"}. When nil or absent,
+     falls back to `drawbridge.client/default-http-headers` (the nREPL
+     config); pass an empty map to send none despite the config.
 
    This fn is implicitly registered as the implementation of
    `nrepl.core/url-connect` for the `ws` and `wss` schemes."
   ([url] (websocket-client-transport url nil))
   ([url {:keys [http-headers]}]
-   (let [incoming (LinkedBlockingQueue.)
+   (let [http-headers (or http-headers client/default-http-headers)
+         incoming (LinkedBlockingQueue.)
          closed? (atom false)
          builder (reduce-kv (fn [b k v] (.header b (name k) (str v)))
-                            (.newWebSocketBuilder (HttpClient/newHttpClient))
-                            (or http-headers {}))
+                            (.newWebSocketBuilder ^HttpClient @http-client)
+                            http-headers)
          ^WebSocket ws (-> builder
                            (.buildAsync (URI/create url)
                                         (queueing-listener incoming closed?))
@@ -67,7 +77,14 @@
          send-lock (Object.)]
      (transport/->FnTransport
       (fn read [timeout]
-        (.poll incoming timeout TimeUnit/MILLISECONDS))
+        ;; Drain anything already queued, then surface closure the
+        ;; same way the bencode socket transport does -- readers
+        ;; (e.g. the bridge relay) must be able to tell a dead
+        ;; connection from an idle one.
+        (or (.poll incoming timeout TimeUnit/MILLISECONDS)
+            (when @closed?
+              (throw (SocketException.
+                      "The WebSocket connection to the nREPL endpoint is closed")))))
       (fn write [msg]
         ;; The JDK client allows only one outstanding text send.
         (locking send-lock

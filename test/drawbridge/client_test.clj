@@ -19,7 +19,7 @@
 (defn server-fixture
   [f]
   (let [server (jetty/run-jetty (-> #'app wrap-keyword-params wrap-nested-params wrap-params)
-                               {:port 0 :join? false})
+                                {:port 0 :join? false})
         port (.getLocalPort (first (.getConnectors server)))]
     (try
       (binding [*port* port]
@@ -85,6 +85,32 @@
             client-b (nrepl/client conn-b 1000)]
         (is (= "3" (:value (send-message client-a {:op "eval" :code "(+ 1 2)"}))))
         (is (= "30" (:value (send-message client-b {:op "eval" :code "(+ 10 20)"}))))))))
+
+(deftest nil-http-headers-fall-back-to-config
+  (testing "an explicit nil :http-headers still gets the config default"
+    (let [seen (atom #{})
+          nrepl-handler (drawbridge/ring-handler)
+          handler (-> (fn [request]
+                        (when-let [auth (get-in request [:headers "authorization"])]
+                          (swap! seen conj auth))
+                        (nrepl-handler request))
+                      wrap-keyword-params
+                      wrap-nested-params
+                      wrap-params)
+          server (jetty/run-jetty handler {:port 0 :join? false})
+          port (.getLocalPort (first (.getConnectors server)))]
+      (try
+        (with-redefs [drawbridge.client/default-http-headers
+                      {"Authorization" "Bearer from-config"}]
+          (with-open [conn (drawbridge.client/ring-client-transport
+                            (str "http://localhost:" port "/repl")
+                            {:http-headers nil})]
+            (let [client (nrepl/client conn 5000)]
+              (is (= {:value "3" :ns "user"}
+                     (send-message client {:op "eval" :code "(+ 1 2)"}))))))
+        (is (= #{"Bearer from-config"} @seen))
+        (finally
+          (.stop server))))))
 
 (deftest polling-is-throttled
   (let [get-count (atom 0)
