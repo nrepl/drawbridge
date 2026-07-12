@@ -16,11 +16,14 @@
 
   ...then point any nREPL client at localhost:7888.
 
-  Note that responses are fetched by polling the HTTP endpoint (see
-  `drawbridge.client` for the throttling details), so output arrives
-  with up to ~100ms of latency."
+  For http(s) URLs, responses are fetched by polling the endpoint
+  (see `drawbridge.client` for the throttling details), so output
+  arrives with up to ~100ms of latency. For ws(s) URLs the bridge
+  speaks the WebSocket transport (`drawbridge.websocket-client`)
+  instead, and responses are pushed with no polling delay."
   (:require
    [drawbridge.client :as client]
+   [drawbridge.websocket-client :as ws-client]
    [nrepl.transport :as transport])
   (:import
    (java.net InetAddress ServerSocket Socket)))
@@ -38,13 +41,21 @@
   [msg]
   (into {} (remove (comp nil? val)) msg))
 
+(defn- remote-transport
+  "Open a client transport for `url`, picking the WebSocket transport
+  for ws/wss URLs and HTTP long-polling otherwise."
+  [url http-headers]
+  (if (re-find #"(?i)^wss?://" url)
+    (ws-client/websocket-client-transport url {:http-headers http-headers})
+    (client/ring-client-transport url {:http-headers http-headers})))
+
 (defn- relay
   "Relay messages between a local socket and the remote Drawbridge
   endpoint at `url` until either side disconnects. Calls `on-close`
   once when the connection winds down."
   [^Socket sock url http-headers on-close]
   (let [local (transport/bencode sock)
-        remote (client/ring-client-transport url {:http-headers http-headers})
+        remote (remote-transport url http-headers)
         open? (atom true)
         close! (fn []
                  (when (compare-and-set! open? true false)
