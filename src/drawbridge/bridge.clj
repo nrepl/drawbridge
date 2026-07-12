@@ -22,9 +22,12 @@
   speaks the WebSocket transport (`drawbridge.websocket-client`)
   instead, and responses are pushed with no polling delay."
   (:require
+   [clojure.java.io :as io]
+   [clojure.string :as str]
    [clojure.walk :as walk]
    [drawbridge.client :as client]
    [drawbridge.websocket-client :as ws-client]
+   [nrepl.bencode :as bencode]
    [nrepl.transport :as transport])
   (:import
    (java.io Closeable)
@@ -153,10 +156,19 @@
                      #(swap! connections disj sock))
               (catch Exception e
                 (swap! connections disj sock)
-                (.close sock)
-                (binding [*out* *err*]
-                  (println "drawbridge.bridge: could not connect to" url "-"
-                           (str e)))))
+                (let [reason (str "drawbridge: could not connect to " url " - " e)]
+                  ;; Best effort: nREPL clients display unsolicited
+                  ;; :err messages, so tell the user why their
+                  ;; connection is about to drop.
+                  (try
+                    (let [out (.getOutputStream sock)]
+                      (bencode/write-bencode out {"err" (str reason "\n")
+                                                  "status" ["error" "done"]})
+                      (.flush out))
+                    (catch Exception _))
+                  (.close sock)
+                  (binding [*out* *err*]
+                    (println reason)))))
             (recur)))
         ;; Closing the server socket unblocks accept with an exception.
         (catch Exception _)))
@@ -172,34 +184,82 @@
   (doseq [^Socket sock @connections]
     (.close sock)))
 
+(def ^:private usage
+  (str/join
+   "\n"
+   ["Usage: -m drawbridge.bridge --url URL [--port N] [--bind ADDR] [--token TOKEN]"
+    ""
+    "  --url URL      the remote Drawbridge endpoint (http(s):// or ws(s)://)"
+    "  --port N       local port to listen on (default 7888)"
+    "  --bind ADDR    local address to bind (default 127.0.0.1)"
+    "  --token TOKEN  sent as an Authorization: Bearer header; prefer the"
+    "                 DRAWBRIDGE_TOKEN environment variable, which doesn't"
+    "                 show up in the process list"
+    "  -h, --help     show this help"]))
+
 (defn- parse-args
   "Parse -main's `--key value` argument pairs into start-bridge
-  options. :url is nil when missing."
-  [args]
-  (let [opts (apply hash-map args)
-        token (get opts "--token")]
-    (cond-> {:url (get opts "--url")
-             :port (or (some-> (get opts "--port") Long/parseLong) 7888)
-             :bind (get opts "--bind" "127.0.0.1")}
-      token (assoc :http-headers
-                   {"Authorization" (str "Bearer " token)}))))
+  options; returns {:help true} for -h/--help. The token falls back
+  to DRAWBRIDGE_TOKEN in `env`. Throws on malformed or unknown
+  arguments; :url is nil when missing."
+  ([args] (parse-args args {"DRAWBRIDGE_TOKEN" (System/getenv "DRAWBRIDGE_TOKEN")}))
+  ([args env]
+   (if (some #{"--help" "-h"} args)
+     {:help true}
+     (do
+       (when (odd? (count args))
+         (throw (IllegalArgumentException.
+                 "Arguments must be --key value pairs (see --help)")))
+       (let [opts (apply hash-map args)
+             unknown (remove #{"--url" "--port" "--bind" "--token"} (keys opts))]
+         (when (seq unknown)
+           (throw (IllegalArgumentException.
+                   (str "Unknown argument(s): " (str/join ", " unknown)
+                        " (see --help)"))))
+         (let [token (or (get opts "--token") (get env "DRAWBRIDGE_TOKEN"))]
+           (cond-> {:url (get opts "--url")
+                    :port (or (some-> (get opts "--port") Long/parseLong) 7888)
+                    :bind (get opts "--bind" "127.0.0.1")}
+             (seq token) (assoc :http-headers
+                                {"Authorization" (str "Bearer " token)}))))))))
+
+(defn- write-port-file!
+  "Write `port` to .nrepl-port in the working directory so editors
+  (CIDER, Calva, ...) can auto-detect the bridge, and arrange for the
+  file to be removed on shutdown. Refuses to overwrite an existing
+  file -- it likely belongs to another running nREPL server."
+  ([port] (write-port-file! port (io/file ".nrepl-port")))
+  ([port ^java.io.File f]
+   (if (.exists f)
+     (binding [*out* *err*]
+       (println "drawbridge: .nrepl-port already exists; not overwriting it"))
+     (do
+       (spit f (str port))
+       (.addShutdownHook (Runtime/getRuntime)
+                         (Thread. ^Runnable #(.delete f)))))))
 
 (defn -main
-  "Command-line entry point.
-
-  Arguments (as `--key value` pairs):
-
-  * `--url URL` (required) -- the remote Drawbridge endpoint
-  * `--port N` -- local port to listen on (default 7888)
-  * `--bind ADDR` -- local address to bind (default 127.0.0.1)
-  * `--token TOKEN` -- sent as an `Authorization: Bearer` header"
+  "Command-line entry point. See `usage` (or run with --help) for the
+  accepted arguments. The bearer token can also be supplied via the
+  DRAWBRIDGE_TOKEN environment variable, which is preferable to
+  --token since arguments are visible in the process list."
   [& args]
-  (let [{:keys [url bind] :as opts} (parse-args args)]
+  (let [{:keys [url bind help] :as opts}
+        (try
+          (parse-args args)
+          (catch IllegalArgumentException e
+            (binding [*out* *err*]
+              (println (.getMessage e)))
+            (System/exit 1)))]
+    (when help
+      (println usage)
+      (System/exit 0))
     (when-not url
       (binding [*out* *err*]
-        (println "Usage: -m drawbridge.bridge --url URL [--port N] [--bind ADDR] [--token TOKEN]"))
+        (println usage))
       (System/exit 1))
     (let [bridge (start-bridge opts)]
+      (write-port-file! (:port bridge))
       (println (format "Drawbridge bridge: nREPL on %s:%d -> %s"
                        bind (:port bridge) url))
       (println "Point your nREPL client (CIDER, Calva, rebel-readline, ...) at this port.")
