@@ -6,6 +6,7 @@
             [drawbridge.client :as client]
             [drawbridge.core :as drawbridge]
             [nrepl.core :as nrepl]
+            [nrepl.transport :as transport]
             [ring.adapter.jetty :as jetty]))
 
 (defn- ok-handler [_] {:status 200 :body "ok"})
@@ -104,8 +105,13 @@
             ;; Two rounds: the accept loop must also survive the
             ;; first failed relay and keep serving new connections.
             (dotimes [_ 2]
-              (is (thrown? Exception
-                           (with-open [conn (nrepl/connect :port (:port b))]
-                             (let [client (nrepl/client conn 20000)]
-                               (doall (nrepl/message client {:op "eval" :code "(+ 1 2)"})))))))
+              (with-open [conn (nrepl/connect :port (:port b))]
+                (testing "the reason arrives as an in-band :err message"
+                  (let [msg (transport/recv conn 20000)]
+                    (is (re-find #"drawbridge: could not connect"
+                                 (or (:err msg) "")))))
+                (testing "and the connection then drops instead of hanging"
+                  (is (thrown? Exception
+                               ;; bounded read loop: throws on close
+                               (dorun (repeatedly 100 #(transport/recv conn 200))))))))
             (finally (bridge/stop-bridge b))))))))

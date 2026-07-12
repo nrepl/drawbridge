@@ -110,21 +110,62 @@
   (is (thrown? IllegalArgumentException (bridge/start-bridge {}))))
 
 (deftest parse-args-test
-  (let [parse #'bridge/parse-args]
+  (let [parse #'bridge/parse-args
+        no-env {}]
     (testing "defaults"
       (is (= {:url "http://x/repl" :port 7888 :bind "127.0.0.1"}
-             (parse ["--url" "http://x/repl"]))))
+             (parse ["--url" "http://x/repl"] no-env))))
 
     (testing "explicit port and bind"
       (is (= {:url "http://x/repl" :port 9999 :bind "0.0.0.0"}
-             (parse ["--url" "http://x/repl" "--port" "9999" "--bind" "0.0.0.0"]))))
+             (parse ["--url" "http://x/repl" "--port" "9999" "--bind" "0.0.0.0"] no-env))))
 
     (testing "token becomes a bearer Authorization header"
       (is (= {"Authorization" "Bearer s3cret"}
-             (:http-headers (parse ["--url" "http://x/repl" "--token" "s3cret"])))))
+             (:http-headers (parse ["--url" "http://x/repl" "--token" "s3cret"] no-env)))))
+
+    (testing "token falls back to the DRAWBRIDGE_TOKEN environment variable"
+      (is (= {"Authorization" "Bearer from-env"}
+             (:http-headers (parse ["--url" "http://x/repl"]
+                                   {"DRAWBRIDGE_TOKEN" "from-env"})))))
+
+    (testing "--token wins over the environment"
+      (is (= {"Authorization" "Bearer explicit"}
+             (:http-headers (parse ["--url" "http://x/repl" "--token" "explicit"]
+                                   {"DRAWBRIDGE_TOKEN" "from-env"})))))
+
+    (testing "-h/--help short-circuit"
+      (is (= {:help true} (parse ["--help"] no-env)))
+      (is (= {:help true} (parse ["-h"] no-env)))
+      (is (= {:help true} (parse ["--url" "http://x/" "--help"] no-env))))
+
+    (testing "unknown arguments are rejected, not silently ignored"
+      (is (thrown-with-msg? IllegalArgumentException #"Unknown argument.*--prot"
+                            (parse ["--url" "http://x/" "--prot" "7888"] no-env))))
+
+    (testing "an odd number of arguments is rejected with a clear message"
+      (is (thrown-with-msg? IllegalArgumentException #"--key value pairs"
+                            (parse ["--url"] no-env))))
 
     (testing "missing url parses to nil (caller decides to bail)"
-      (is (nil? (:url (parse [])))))))
+      (is (nil? (:url (parse [] no-env)))))))
+
+(deftest write-port-file-test
+  (let [write! #'bridge/write-port-file!
+        dir (java.nio.file.Files/createTempDirectory
+             "drawbridge-test" (make-array java.nio.file.attribute.FileAttribute 0))
+        f (.toFile (.resolve dir ".nrepl-port"))]
+    (try
+      (testing "writes the port for editor auto-detection"
+        (write! 7888 f)
+        (is (= "7888" (slurp f))))
+
+      (testing "refuses to overwrite an existing port file"
+        (write! 9999 f)
+        (is (= "7888" (slurp f)) "existing file should be left alone"))
+      (finally
+        (.delete f)
+        (.delete (.toFile dir))))))
 
 (deftest bencode-safe-test
   (let [f #'bridge/bencode-safe]
