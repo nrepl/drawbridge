@@ -1,0 +1,6 @@
+{:paths ["src"]
+ :deps {nrepl/nrepl {:mvn/version "1.7.0"}
+        ring/ring-core {:mvn/version "1.15.5"}
+        cheshire/cheshire {:mvn/version "6.2.0"}
+        ;; client
+        clj-http/clj-http {:mvn/version "3.13.1"}}}
