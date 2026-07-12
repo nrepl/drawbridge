@@ -101,15 +101,26 @@
       (is (= [] messages))))
 
   (testing "GET retrieves deferred eval results via polling"
+    ;; The sleep guarantees the eval is still pending when the POST
+    ;; (read timeout 0) returns; on a warm JVM a bare (+ 5 6) can
+    ;; finish before the POST drains its responses.
     (let [handler (make-handler)
-          resp1 (handler (request :post {:op "eval" :code "(+ 5 6)"}))
+          resp1 (handler (request :post {:op "eval"
+                                         :code "(do (Thread/sleep 300) (+ 5 6))"}))
           cookie (extract-session-cookie resp1 "drawbridge-session")]
       (is (= [] (parse-body (:body resp1))))
-      (Thread/sleep 200)
-      (let [resp2 (handler (-> (request :get)
-                               (assoc-in [:headers "cookie"]
-                                         (str "drawbridge-session=" cookie))))
-            messages (parse-body (:body resp2))]
+      (let [deadline (+ (System/currentTimeMillis) 10000)
+            poll (fn []
+                   (parse-body
+                    (:body (handler (-> (request :get)
+                                        (assoc-in [:headers "cookie"]
+                                                  (str "drawbridge-session=" cookie)))))))
+            messages (loop []
+                       (let [msgs (poll)]
+                         (if (or (some #(= "11" (:value %)) msgs)
+                                 (> (System/currentTimeMillis) deadline))
+                           msgs
+                           (do (Thread/sleep 100) (recur)))))]
         (is (some #(= "11" (:value %)) messages))))))
 
 (deftest session-handling
