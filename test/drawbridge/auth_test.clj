@@ -92,3 +92,20 @@
                     responses (nrepl/message client {:op "eval" :code "(* 6 7)"})]
                 (is (some #(= "42" (:value %)) responses))))
             (finally (bridge/stop-bridge b))))))))
+
+(deftest bridge-rejected-by-endpoint
+  (testing "clients of a misconfigured bridge fail fast instead of hanging"
+    (with-secure-server "s3cret"
+      (fn [port]
+        (let [b (bridge/start-bridge
+                 {:url (str "http://localhost:" port "/")
+                  :http-headers {"Authorization" "Bearer WRONG"}})]
+          (try
+            ;; Two rounds: the accept loop must also survive the
+            ;; first failed relay and keep serving new connections.
+            (dotimes [_ 2]
+              (is (thrown? Exception
+                           (with-open [conn (nrepl/connect :port (:port b))]
+                             (let [client (nrepl/client conn 20000)]
+                               (doall (nrepl/message client {:op "eval" :code "(+ 1 2)"})))))))
+            (finally (bridge/stop-bridge b))))))))
