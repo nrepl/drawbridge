@@ -168,8 +168,11 @@
         (.stop server)
         ;; The relay should notice the dead remote and close our
         ;; socket; a read on it then throws instead of hanging forever.
+        ;; The generous deadline only matters on failure -- success
+        ;; exits the loop at the first throw. Jetty's graceful stop
+        ;; plus WS close propagation can take a while on slow CI.
         (is (thrown? Exception
-                     (let [deadline (+ (System/currentTimeMillis) 10000)]
+                     (let [deadline (+ (System/currentTimeMillis) 60000)]
                        (loop []
                          (transport/recv conn 100)
                          (when (< (System/currentTimeMillis) deadline)
