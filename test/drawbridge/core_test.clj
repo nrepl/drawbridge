@@ -6,7 +6,9 @@
             [nrepl.transport :as transport]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.nested-params :refer [wrap-nested-params]]
-            [ring.middleware.params :refer [wrap-params]]))
+            [ring.middleware.params :refer [wrap-params]]
+            [ring.middleware.session :refer [wrap-session]]
+            [ring.middleware.session.memory :as mem]))
 
 (defn- make-handler
   [& opts]
@@ -128,6 +130,48 @@
           set-cookie (get-set-cookie resp)]
       (is (some? set-cookie))
       (is (re-find #"my-session=" set-cookie)))))
+
+;; Regression test for #11: early Drawbridge stored its transport in
+;; the application's shared ring session, clobbering the app's own
+;; session data. The handler now keeps its state in a private memory
+;; store under its own cookie, so an app-level session must survive
+;; REPL traffic untouched.
+(deftest app-ring-session-is-not-clobbered
+  (let [app-sessions (atom {})
+        drawbridge-handler (make-handler :default-read-timeout 5000)
+        handler (-> (fn [req]
+                      (if (= "/repl" (:uri req))
+                        (drawbridge-handler req)
+                        {:status 200
+                         :session (assoc (:session req) :user "bozhidar")
+                         :body (str (get-in req [:session :user]))}))
+                    (wrap-session {:store (mem/memory-store app-sessions)}))]
+    ;; establish an app session
+    (let [resp1 (handler {:request-method :get :uri "/app" :headers {}})
+          app-cookie (extract-session-cookie resp1 "ring-session")]
+      (is (some? app-cookie) "app session cookie should be set")
+
+      ;; hit the nREPL endpoint with the app session cookie attached
+      (let [resp2 (handler (-> (request :post {:op "eval" :code "(+ 1 2)"})
+                               (assoc-in [:headers "cookie"]
+                                         (str "ring-session=" app-cookie))))]
+        (is (= 200 (:status resp2)))
+        (testing "drawbridge answers with its own cookie, not the app's"
+          (let [set-cookie (or (get-set-cookie resp2) "")]
+            (is (re-find #"drawbridge-session=" set-cookie))
+            (is (not (re-find #"ring-session=" set-cookie))))))
+
+      (testing "the app session survives REPL traffic"
+        (let [resp3 (handler (-> {:request-method :get :uri "/app" :headers {}}
+                                 (assoc-in [:headers "cookie"]
+                                           (str "ring-session=" app-cookie))))]
+          (is (= "bozhidar" (:body resp3)))))
+
+      (testing "no drawbridge internals leak into the app session store"
+        (is (not-any? (fn [[_ session]]
+                        (some #(= "drawbridge.core" (namespace %))
+                              (filter keyword? (keys session))))
+                      @app-sessions))))))
 
 (deftest custom-nrepl-handler
   (testing "responses come from the supplied handler"
