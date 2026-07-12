@@ -1,5 +1,19 @@
 = Changelog
 
+== master (unreleased)
+
+* Add `drawbridge.bridge`: a local nREPL socket server that relays to a
+  remote Drawbridge endpoint, so socket-based clients (CIDER, Calva,
+  rebel-readline, `nrepl.cmdline`) can connect to Drawbridge.
+* Add `drawbridge.auth/wrap-token` (constant-time bearer-token middleware)
+  and `drawbridge.core/secure-ring-handler`, a one-form secure endpoint
+  that refuses to run unauthenticated unless passed `:insecure true`.
+* https://github.com/nrepl/drawbridge/issues/44[#44]: Add a WebSocket
+  transport (`drawbridge.websocket` server side,
+  `drawbridge.websocket-client` client side, registered on `url-connect`
+  for `ws`/`wss`) with server push instead of HTTP long-polling.
+* Add an options arity to `ring-client-transport` accepting `:http-headers`.
+
 == 0.3.1 (2026-07-09)
 
 * Update dependencies: nREPL 1.7.0, Ring 1.15.5, Cheshire 6.2.0.
