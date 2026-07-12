@@ -86,43 +86,49 @@ Drawbridge has two sides:
 * A *client side* (`drawbridge.client`) that lets Clojure tooling connect
   to such an endpoint over HTTP/HTTPS.
 
-The sections below cover each in turn, with complete examples.
+There's also a *bridge* (`drawbridge.bridge`) that lets socket-based
+clients like CIDER and rebel-readline connect to a Drawbridge endpoint,
+and a *WebSocket transport* (`drawbridge.websocket`) that trades the
+HTTP long-polling for real-time server push. The sections below cover
+each in turn, with complete examples.
 
 == Server: exposing an nREPL endpoint over HTTP
 
-`drawbridge.core/ring-handler` returns an ordinary Ring handler. It needs
-the standard param middleware (`wrap-keyword-params`, `wrap-nested-params`
-and `wrap-params`, a.k.a. the Compojure "api" stack) applied to it, and it
-only responds to `GET` and `POST` requests. Session state is managed
-internally, so you don't need to add session middleware yourself.
+=== A secure endpoint in one form
 
-=== A standalone endpoint
-
-The smallest possible server: wrap the handler in the required middleware
-and run it with the Jetty adapter.
+`drawbridge.core/secure-ring-handler` returns a complete, ready-to-mount
+Ring handler: bearer-token authentication plus all the middleware the
+endpoint needs, correctly ordered.
 
 [source,clojure]
 ----
 (ns my-app.repl
   (:require
-   [drawbridge.core :refer [ring-handler]]
-   [ring.adapter.jetty :refer [run-jetty]]
-   [ring.middleware.keyword-params :refer [wrap-keyword-params]]
-   [ring.middleware.nested-params :refer [wrap-nested-params]]
-   [ring.middleware.params :refer [wrap-params]]))
-
-(def app
-  (-> (ring-handler)
-      wrap-keyword-params
-      wrap-nested-params
-      wrap-params))
+   [drawbridge.core :refer [secure-ring-handler]]
+   [ring.adapter.jetty :refer [run-jetty]]))
 
 (defn -main [& _]
-  (run-jetty app {:port 8080 :join? false}))
+  (run-jetty (secure-ring-handler :token (System/getenv "DRAWBRIDGE_TOKEN"))
+             {:port 8080 :join? false}))
 ----
 
-Run it and you have an nREPL endpoint at `http://localhost:8080/`. See
-the client section below for how to connect.
+Run it and you have a token-guarded nREPL endpoint at
+`http://localhost:8080/` -- see the client sections below for how to
+connect. Requests without a matching `Authorization: Bearer <token>`
+header get a 401.
+
+`secure-ring-handler` refuses to build an endpoint without a `:token`;
+if authentication is genuinely handled elsewhere in your stack, opt out
+explicitly with `:insecure true`.
+
+=== Assembling the handler yourself
+
+The underlying `drawbridge.core/ring-handler` returns an ordinary Ring
+handler. It needs the standard param middleware (`wrap-keyword-params`,
+`wrap-nested-params` and `wrap-params`, a.k.a. the Compojure "api"
+stack) applied to it, and it only responds to `GET` and `POST`
+requests. Session state is managed internally, so you don't need to add
+session middleware yourself.
 
 === Mounting into an existing app
 
@@ -154,7 +160,9 @@ https://github.com/weavejester/compojure[Compojure]:
 ----
 
 Any HTTP or HTTPS client can now send nREPL messages to `/repl` and read
-responses from the same URI.
+responses from the same URI. (The result of `secure-ring-handler` can be
+routed the same way -- it's just a Ring handler with the middleware
+already applied.)
 
 === Handler options
 
@@ -176,19 +184,25 @@ endpoint with authentication and authorization middleware before deploying to
 production. Use HTTPS to prevent credentials and REPL traffic from being
 transmitted in cleartext.
 
-Because the endpoint is just a Ring handler, any authentication or
-authorization middleware you already use applies. For example, gating it
-behind HTTP Basic auth:
+The built-in answer is bearer-token auth: use `secure-ring-handler`
+(shown above), or apply `drawbridge.auth/wrap-token` directly when
+assembling the handler yourself. The token comparison is
+constant-time, and the client side sends the matching header via
+`.nrepl.edn`, the bridge's `--token` argument, or the transports'
+`:http-headers` option.
 
 [source,clojure]
 ----
-(require '[ring.middleware.basic-authentication :refer [wrap-basic-authentication]])
+(require '[drawbridge.auth :refer [wrap-token]])
 
 (def secured-drawbridge
-  (-> drawbridge
-      (wrap-basic-authentication
-       (fn [user pass] (and (= user "me") (= pass "secret"))))))
+  (wrap-token drawbridge (System/getenv "DRAWBRIDGE_TOKEN")))
 ----
+
+Because the endpoint is just a Ring handler, any other authentication or
+authorization middleware you already use applies too -- e.g. HTTP Basic
+auth via `ring.middleware.basic-authentication`, or whatever guards the
+rest of your app.
 
 == Client: connecting to an endpoint
 
@@ -273,16 +287,91 @@ configuration by creating `.nrepl.edn` in the working directory:
 
 These headers are attached to every request the client makes.
 
-=== A note on socket-based clients
+== Editors and terminal REPLs: the bridge
 
 Many nREPL clients -- editor tooling such as CIDER, Calva, and Conjure,
-terminal REPLs like rebel-readline, and nREPL's own `--connect` command line
--- connect using a host and port over a raw socket rather than a URL. These
-never go through `url-connect`, so they cannot talk to a Drawbridge endpoint
-directly. Drawbridge targets URL-based connections (`lein repl :connect`, the
-Clojure CLI example above) and programmatic clients. To reach an endpoint
-from a socket-based client you'd need an nREPL client that speaks the HTTP
-transport, or a local process that bridges a socket to the HTTP endpoint.
+terminal REPLs like rebel-readline, and nREPL's own `--connect` command
+line -- connect using a host and port over a raw socket rather than a
+URL. These never go through `url-connect`, so they cannot talk to a
+Drawbridge endpoint directly.
+
+The bridge closes that gap. It's a small local process that listens on
+a plain nREPL socket and relays every message to a remote Drawbridge
+endpoint:
+
+[source,shell]
+----
+clojure -Sdeps '{:deps {nrepl/drawbridge {:mvn/version "0.3.1"}}}' \
+  -M -m drawbridge.bridge --url https://my-app.example.com/repl \
+  --port 7888 --token $DRAWBRIDGE_TOKEN
+----
+
+Now `cider-connect` to `localhost:7888` (or point Calva, rebel-readline,
+or any other nREPL client there) and you're evaluating code on the
+remote app. Each local connection gets its own session on the remote
+end, and `--token` is sent as an `Authorization: Bearer` header --
+pairing with `secure-ring-handler` on the server.
+
+The bridge can also be started programmatically with
+`drawbridge.bridge/start-bridge`. When given a `ws://` or `wss://` URL
+it speaks the WebSocket transport (see below) instead of HTTP
+long-polling, which eliminates polling latency entirely.
+
+== WebSocket transport
+
+The HTTP transport works everywhere, but it's polling-based: the client
+has to keep asking the server for output. The WebSocket transport lets
+the server push nREPL responses the moment they're produced -- snappier
+evals, streaming output, no polling traffic.
+
+On the server, `drawbridge.websocket/ring-handler` returns a Ring
+handler that upgrades WebSocket requests and speaks nREPL over JSON
+text frames. It needs no param middleware, and plain HTTP requests can
+fall through to the long-poll handler so a single route serves both
+transports:
+
+[source,clojure]
+----
+(ns my-app.repl
+  (:require
+   [drawbridge.auth :refer [wrap-token]]
+   [drawbridge.core :as drawbridge]
+   [drawbridge.websocket :as websocket]
+   [ring.adapter.jetty :refer [run-jetty]]))
+
+(def app
+  (-> (websocket/ring-handler
+       :fallback (drawbridge/secure-ring-handler :insecure true))
+      (wrap-token (System/getenv "DRAWBRIDGE_TOKEN"))))
+
+(defn -main [& _]
+  (run-jetty app {:port 8080 :join? false}))
+----
+
+(Note how `wrap-token` guards both transports at once, so the fallback
+handler opts out of its own auth with `:insecure true`.)
+
+WebSocket support requires a Ring adapter that implements the Ring 1.11+
+WebSocket API -- ring-jetty-adapter does out of the box.
+
+On the client, `drawbridge.websocket-client` registers the `ws` and
+`wss` schemes with `url-connect` (using the JDK's built-in WebSocket
+client, no extra dependencies):
+
+[source,clojure]
+----
+(require '[drawbridge.websocket-client] ;; registers ws/wss on url-connect
+         '[nrepl.core :as nrepl])
+
+(with-open [conn (nrepl/url-connect "ws://localhost:8080/")]
+  (-> (nrepl/client conn 1000)
+      (nrepl/message {:op "eval" :code "(+ 1 2)"})
+      nrepl/response-values))
+;; => [3]
+----
+
+...and, as noted above, the bridge picks this transport automatically
+for `ws(s)://` URLs -- the recommended setup for editor use.
 
 == Need Help?
 
