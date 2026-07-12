@@ -70,8 +70,11 @@
   endpoint at `url` until either side disconnects. Calls `on-close`
   once when the connection winds down."
   [^Socket sock url http-headers poll-opts on-close]
-  (let [local (transport/bencode sock)
-        remote (remote-transport url http-headers)
+  ;; Open the remote side first: it's the fallible one (unreachable
+  ;; endpoint, auth rejection), and at this point no local transport
+  ;; resources exist yet for a throw to leak.
+  (let [remote (remote-transport url http-headers)
+        local (transport/bencode sock)
         {:keys [active-poll-ms idle-poll-ms idle-after-ms]} poll-opts
         open? (atom true)
         last-activity (atom (System/currentTimeMillis))
@@ -141,8 +144,19 @@
         (loop []
           (let [^Socket sock (.accept server)]
             (swap! connections conj sock)
-            (relay sock url http-headers poll-opts
-                   #(swap! connections disj sock))
+            ;; A failure to reach the remote endpoint (e.g. a 401 on
+            ;; the first request) must not kill the accept loop, and
+            ;; the local client should see its connection drop right
+            ;; away rather than hang waiting for a handshake.
+            (try
+              (relay sock url http-headers poll-opts
+                     #(swap! connections disj sock))
+              (catch Exception e
+                (swap! connections disj sock)
+                (.close sock)
+                (binding [*out* *err*]
+                  (println "drawbridge.bridge: could not connect to" url "-"
+                           (str e)))))
             (recur)))
         ;; Closing the server socket unblocks accept with an exception.
         (catch Exception _)))
