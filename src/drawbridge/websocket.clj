@@ -18,7 +18,18 @@
    [cheshire.core :as json]
    [nrepl.server :as server]
    [nrepl.transport :as transport]
-   [ring.websocket :as ws]))
+   [ring.websocket :as ws])
+  (:import
+   (java.util.concurrent Executors ScheduledFuture ThreadFactory TimeUnit)))
+
+(defonce ^:private ping-scheduler
+  ;; One shared daemon thread schedules keepalive pings for all
+  ;; connections; the work per tick is a single frame write.
+  (delay (Executors/newSingleThreadScheduledExecutor
+          (reify ThreadFactory
+            (newThread [_ r]
+              (doto (Thread. r "drawbridge-ws-ping")
+                (.setDaemon true)))))))
 
 (def ^:private upgrade-required-response
   {:status 426
@@ -64,26 +75,47 @@
        one route serve both this transport and the HTTP long-poll
        transport of `drawbridge.core/ring-handler`
        (default: respond with 426 Upgrade Required)
+     * :ping-interval-ms -- how often to send a keepalive ping on
+       each connection, preventing proxies and routers from dropping
+       idle REPL sessions (default 30000; 0 disables)
 
    No param middleware is needed, in contrast to
    `drawbridge.core/ring-handler`."
-  [& {:keys [nrepl-handler fallback]
+  [& {:keys [nrepl-handler fallback ping-interval-ms]
       :or {nrepl-handler (server/default-handler)
-           fallback (constantly upgrade-required-response)}}]
+           fallback (constantly upgrade-required-response)
+           ping-interval-ms 30000}}]
   (fn [request]
     (if (ws/upgrade-request? request)
       ;; One transport per connection, so its lock serializes every
       ;; writer targeting this socket across all in-flight messages.
-      (let [transport (volatile! nil)]
+      (let [transport (volatile! nil)
+            ping-task (volatile! nil)
+            stop-pings! (fn []
+                          (when-let [^ScheduledFuture task @ping-task]
+                            (.cancel task false)))]
         {::ws/listener
          {:on-open (fn [socket]
-                     (vreset! transport (websocket-transport socket)))
+                     (vreset! transport (websocket-transport socket))
+                     (when (pos? ping-interval-ms)
+                       (vreset! ping-task
+                                (.scheduleAtFixedRate
+                                 ^java.util.concurrent.ScheduledExecutorService @ping-scheduler
+                                 #(try
+                                    (when (ws/open? socket)
+                                      (ws/ping socket))
+                                    (catch Exception _))
+                                 (long ping-interval-ms)
+                                 (long ping-interval-ms)
+                                 TimeUnit/MILLISECONDS))))
           :on-message (fn [_socket message]
                         (let [msg (json/parse-string (str message) true)
                               t @transport]
                           (future (server/handle* msg nrepl-handler t))))
           :on-error (fn [socket _throwable]
+                      (stop-pings!)
                       (when (ws/open? socket)
                         (ws/close socket 1011 "nREPL transport error")))
-          :on-close (fn [_socket _code _reason])}})
+          :on-close (fn [_socket _code _reason]
+                      (stop-pings!))}})
       (fallback request))))
