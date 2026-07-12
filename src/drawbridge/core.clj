@@ -12,6 +12,7 @@
   (:require
    [cheshire.core :as json]
    clojure.walk
+   [drawbridge.auth :as auth]
    [nrepl.core :as nrepl]
    [nrepl.server :as server]
    [nrepl.transport :as transport]
@@ -124,6 +125,32 @@
                             (future (server/handle* msg nrepl-handler write)))
                           (client)))))))
       (memory-session :cookie-name cookie-name)))
+
+(defn secure-ring-handler
+  "Like `ring-handler`, but returns a complete, ready-to-mount Ring
+   handler: the required param middlewares are applied in the right
+   order and the endpoint is protected by bearer-token authentication
+   (see `drawbridge.auth/wrap-token`).
+
+   Accepts all of `ring-handler`'s options plus:
+
+     * :token -- the bearer token clients must present on every request.
+     * :insecure -- pass true to deliberately opt out of authentication,
+       e.g. when auth is enforced elsewhere in your middleware stack.
+
+   Exposing an unauthenticated nREPL endpoint means anyone who can
+   reach it can execute arbitrary code, so omitting :token without
+   explicitly passing :insecure true throws."
+  [& {:keys [token insecure] :as opts}]
+  (when-not (or (seq token) (true? insecure))
+    (throw (IllegalArgumentException.
+            (str "Refusing to create an unauthenticated nREPL endpoint. "
+                 "Pass a :token, or :insecure true to opt out of authentication."))))
+  (cond-> (-> (apply ring-handler (mapcat identity (dissoc opts :token :insecure)))
+              wrap-keyword-params
+              wrap-nested-params
+              wrap-params)
+    (seq token) (auth/wrap-token token)))
 
 ;; enable easy interactive debugging of typical usage
 (def ^{:private true} app (-> (ring-handler)
